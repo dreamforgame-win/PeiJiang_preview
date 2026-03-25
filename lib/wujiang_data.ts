@@ -1006,4 +1006,20 @@ export const wujiangData = [
       probability: 0.65,
     },
   },
+    {
+    season: "S1",
+    name: "黄月英",
+    faction: "蜀",
+    roles: ["辅助", "治疗", "均衡"],
+    arms: ["弓兵"],
+    base_stats: { 武力: 39.0, 智力: 35.0, 统率: 84.0, 先攻: 36.0 },
+    innate_skill: {
+      season: "S1",
+      name: "木牛流马",
+      description:
+        "奇数回合开始时提升我军全体12.5%→25%造成伤害（受智力影响），持续至回合结束。偶数回合开始时恢复我军全体兵力（治疗率110%→220%，受智力影响)",
+      trigger: "指挥",
+      probability: 1,
+    },
+  },
 ];
