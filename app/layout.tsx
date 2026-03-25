@@ -13,7 +13,7 @@ const workSans = Work_Sans({
 });
 
 export const metadata: Metadata = {
-  title: '战术核心配将图鉴',
+  title: '三谋配将助手',
   description: '高级策略顾问 - 阵容搭配与分析',
 };
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Search, Bell, Settings, Users, Medal, BookOpen, Library, 
   Compass, Plus, List, Quote, Share2, Heart, Swords, 
@@ -150,33 +150,36 @@ export default function Page() {
     return Math.min(score, 100);
   };
 
-  const teamsWithMatch = allTeams.map(team => ({
-    ...team,
-    matchPercentage: mounted ? calculateMatchPercentage(team) : 0,
-    isFavorited: favoritedTeams.includes(team.id)
-  }));
+  const filteredTeams = useMemo(() => {
+    const teamsWithMatch = allTeams.map(team => ({
+      ...team,
+      matchPercentage: mounted ? calculateMatchPercentage(team) : 0,
+      isFavorited: favoritedTeams.includes(team.id)
+    }));
 
-  const filteredTeams = teamsWithMatch.filter((team: any) => {
-    // Filter by sub-tab
-    if (teamSubTab === 'recommended' && team.isCustom) return false;
-    if (teamSubTab === 'custom' && !team.isCustom) return false;
+    const filtered = teamsWithMatch.filter((team: any) => {
+      // Filter by sub-tab
+      if (teamSubTab === 'recommended' && team.isCustom) return false;
+      if (teamSubTab === 'custom' && !team.isCustom) return false;
 
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return team.name.toLowerCase().includes(query) ||
-           team.config.some((general: any) => 
-             general.武将.toLowerCase().includes(query) ||
-             general.技能.toLowerCase().includes(query)
-           );
-  });
-
-  if (mounted) {
-    filteredTeams.sort((a, b) => {
-      if (a.isFavorited && !b.isFavorited) return -1;
-      if (!a.isFavorited && b.isFavorited) return 1;
-      return b.matchPercentage - a.matchPercentage;
+      if (!searchQuery) return true;
+      const query = searchQuery.toLowerCase();
+      return team.name.toLowerCase().includes(query) ||
+             team.config.some((general: any) => 
+               general.武将.toLowerCase().includes(query) ||
+               general.技能.toLowerCase().includes(query)
+             );
     });
-  }
+
+    if (mounted) {
+      filtered.sort((a, b) => {
+        if (a.isFavorited && !b.isFavorited) return -1;
+        if (!a.isFavorited && b.isFavorited) return 1;
+        return b.matchPercentage - a.matchPercentage;
+      });
+    }
+    return filtered;
+  }, [allTeams, mounted, favoritedTeams, teamSubTab, searchQuery, collectedGenerals, collectedTactics]);
 
   useEffect(() => {
     if (mounted && filteredTeams.length > 0) {
@@ -188,10 +191,18 @@ export default function Page() {
     }
   }, [filteredTeams, activeTeamId, mounted]);
 
-  // Special effect to reset selection to top when search or tab changes
+  const prevFilters = useRef({ searchQuery, teamSubTab, activeTab });
   useEffect(() => {
     if (mounted && filteredTeams.length > 0) {
-      setActiveTeamId(filteredTeams[0].id);
+      const filtersChanged = 
+        prevFilters.current.searchQuery !== searchQuery || 
+        prevFilters.current.teamSubTab !== teamSubTab || 
+        prevFilters.current.activeTab !== activeTab;
+      
+      if (filtersChanged) {
+        setActiveTeamId(filteredTeams[0].id);
+        prevFilters.current = { searchQuery, teamSubTab, activeTab };
+      }
     }
   }, [searchQuery, teamSubTab, activeTab, mounted, filteredTeams]);
 
@@ -407,7 +418,7 @@ export default function Page() {
       <header className="fixed top-0 left-0 w-full flex justify-between items-center px-6 h-16 bg-white/80 backdrop-blur-md z-50 border-b border-outline-variant/10">
         <div className="flex items-center gap-4">
           <span className="text-xl font-black text-primary tracking-tight font-headline">
-            ⚔️ 战术核心配将图鉴
+            ⚔️ 三谋配将助手
           </span>
         </div>
         <div className="flex items-center gap-6">
@@ -806,7 +817,7 @@ export default function Page() {
               allTactics={allTactics}
             />
           ) : activeTab === 'mockBattle' ? (
-            <MockBattle allGenerals={allGenerals} allTactics={allTactics} />
+            <MockBattle allGenerals={allGenerals} allTactics={allTactics} allTeams={allTeams} />
           ) : null}
           {selectedGeneral && (
             <DetailModal 
@@ -1022,10 +1033,7 @@ export default function Page() {
               if (typeof data !== 'object' || (!data.generals && !data.tactics)) {
                 throw new Error("文件格式错误，应包含 generals 或 tactics 字段");
               }
-              const result = [];
-              if (data.generals) result.push(...data.generals);
-              if (data.tactics) result.push(...data.tactics);
-              return result; // Just for count display
+              return data;
             }}
           />
 

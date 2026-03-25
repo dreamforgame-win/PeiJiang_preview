@@ -1,25 +1,165 @@
 "use client";
 
-import { useState } from 'react';
-import { Plus, Search, X, Check, Shield, Swords } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Plus, Search, X, Check, Shield, Swords, RefreshCw } from 'lucide-react';
 
 interface MockBattleProps {
   allGenerals: any[];
   allTactics: any[];
+  allTeams: any[];
 }
 
 type SlotItem = { type: 'general' | 'tactic'; data: any };
 
-export default function MockBattle({ allGenerals, allTactics }: MockBattleProps) {
-  const [warehouseGenerals, setWarehouseGenerals] = useState<any[]>([]);
-  const [warehouseTactics, setWarehouseTactics] = useState<any[]>([]);
+export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBattleProps) {
+  const [manuallyAddedGenerals, setManuallyAddedGenerals] = useState<any[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('mockBattleManuallyAddedGenerals');
+      if (saved) return JSON.parse(saved);
+    }
+    return [];
+  });
+  const [manuallyAddedTactics, setManuallyAddedTactics] = useState<any[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('mockBattleManuallyAddedTactics');
+      if (saved) return JSON.parse(saved);
+    }
+    return [];
+  });
+  const [simulationItem, setSimulationItem] = useState<SlotItem | null>(null);
   
+  useEffect(() => {
+    localStorage.setItem('mockBattleManuallyAddedGenerals', JSON.stringify(manuallyAddedGenerals));
+    localStorage.setItem('mockBattleManuallyAddedTactics', JSON.stringify(manuallyAddedTactics));
+  }, [manuallyAddedGenerals, manuallyAddedTactics]);
+  
+  const [viewMode, setViewMode] = useState<'rounds' | 'recommendations'>('rounds');
   const [currentRound, setCurrentRound] = useState(0);
   // roundsData[roundIndex][groupIndex][slotIndex]
-  const [roundsData, setRoundsData] = useState<(SlotItem | null)[][][]>(
-    Array(6).fill(null).map(() => Array(3).fill(null).map(() => Array(3).fill(null)))
-  );
-  const [selectedGroups, setSelectedGroups] = useState<(number | null)[]>(Array(6).fill(null));
+  const [roundsData, setRoundsData] = useState<(SlotItem | null)[][][]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('mockBattleRoundsData');
+      if (saved) return JSON.parse(saved);
+    }
+    return Array(6).fill(null).map(() => Array(3).fill(null).map(() => Array(3).fill(null)));
+  });
+  const [selectedGroups, setSelectedGroups] = useState<(number | null)[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('mockBattleSelectedGroups');
+      if (saved) return JSON.parse(saved);
+    }
+    return Array(6).fill(null);
+  });
+
+  // Derived warehouse state
+  const warehouseGenerals = [
+    ...manuallyAddedGenerals,
+    ...selectedGroups.flatMap((groupIndex, roundIndex) => {
+      if (groupIndex === null) return [];
+      return roundsData[roundIndex][groupIndex]
+        .filter(slot => slot?.type === 'general')
+        .map(slot => slot!.data);
+    })
+  ];
+
+  const warehouseTactics = [
+    ...manuallyAddedTactics,
+    ...selectedGroups.flatMap((groupIndex, roundIndex) => {
+      if (groupIndex === null) return [];
+      return roundsData[roundIndex][groupIndex]
+        .filter(slot => slot?.type === 'tactic')
+        .map(slot => slot!.data);
+    })
+  ];
+
+  const saveToLocalStorage = (rounds: any, groups: any) => {
+    localStorage.setItem('mockBattleRoundsData', JSON.stringify(rounds));
+    localStorage.setItem('mockBattleSelectedGroups', JSON.stringify(groups));
+  };
+
+  const normalizedTeams = useMemo(() => {
+    return allTeams.map(team => {
+      if (team.generals) return team;
+      return {
+        ...team,
+        generals: team.config?.map((c: any) => ({
+          name: c["武将"],
+          tactics: c["技能"]?.split('\n').map((s: string) => s.trim()).filter(Boolean) || []
+        })) || []
+      };
+    });
+  }, [allTeams]);
+
+  const calculateMatchScore = (team: any, extraItem?: SlotItem | null) => {
+    const teamGenerals = team.generals.map((g: any) => g.name);
+    const teamTactics = team.generals.flatMap((g: any) => g.tactics.slice(0, 2));
+
+    // Combine manually added items, all items selected in rounds, and the extra item
+    const allSelectedGenerals = [
+      ...manuallyAddedGenerals,
+      ...selectedGroups.flatMap((groupIndex, roundIndex) => {
+        if (groupIndex === null) return [];
+        return roundsData[roundIndex][groupIndex]
+          .filter(slot => slot?.type === 'general')
+          .map(slot => slot!.data);
+      }),
+      ...(extraItem?.type === 'general' ? [extraItem.data] : [])
+    ];
+    const allSelectedTactics = [
+      ...manuallyAddedTactics,
+      ...selectedGroups.flatMap((groupIndex, roundIndex) => {
+        if (groupIndex === null) return [];
+        return roundsData[roundIndex][groupIndex]
+          .filter(slot => slot?.type === 'tactic')
+          .map(slot => slot!.data);
+      }),
+      ...(extraItem?.type === 'tactic' ? [extraItem.data] : [])
+    ];
+
+    const selectedGeneralNames = allSelectedGenerals.map(g => g.name);
+    const selectedTacticNames = allSelectedTactics.map(t => t.name);
+
+    let matchedGenerals = 0;
+    teamGenerals.forEach((g: string) => {
+      if (selectedGeneralNames.includes(g)) matchedGenerals++;
+    });
+
+    let matchedTactics = 0;
+    teamTactics.forEach((t: string) => {
+      if (selectedTacticNames.includes(t)) matchedTactics++;
+    });
+    
+    const totalItems = teamGenerals.length + teamTactics.length;
+    if (totalItems === 0) return 0;
+    
+    const score = Math.round(((matchedGenerals + matchedTactics) * 11 / (totalItems * 11)) * 100);
+    return score;
+  };
+
+  const getBestMatchForSlot = (slot: SlotItem | null) => {
+    if (!slot) return null;
+    let bestTeam: any = null;
+    let maxScore = 0;
+    
+    normalizedTeams.forEach(team => {
+      let contains = false;
+      if (slot.type === 'general') {
+        contains = team.generals?.some((g: any) => g.name === slot.data.name);
+      } else {
+        contains = team.generals?.some((g: any) => g.tactics?.includes(slot.data.name));
+      }
+      
+      if (contains) {
+        const score = calculateMatchScore(team, slot);
+        if (score > maxScore) {
+          maxScore = score;
+          bestTeam = team;
+        }
+      }
+    });
+    
+    return { bestTeam, maxScore };
+  };
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalTarget, setModalTarget] = useState<{
@@ -44,35 +184,23 @@ export default function MockBattle({ allGenerals, allTactics }: MockBattleProps)
     if (!modalTarget) return;
 
     if (modalTarget.dest === 'warehouse_general') {
-      setWarehouseGenerals(prev => [...prev, item]);
+      setManuallyAddedGenerals(prev => [...prev, item]);
     } else if (modalTarget.dest === 'warehouse_tactic') {
-      setWarehouseTactics(prev => [...prev, item]);
+      setManuallyAddedTactics(prev => [...prev, item]);
     } else if (modalTarget.dest === 'slot') {
       const newRounds = [...roundsData];
       newRounds[modalTarget.roundIndex!][modalTarget.groupIndex!][modalTarget.slotIndex!] = { type, data: item };
       setRoundsData(newRounds);
+      saveToLocalStorage(newRounds, selectedGroups);
     }
     setIsModalOpen(false);
   };
 
   const handleSelectGroup = (roundIndex: number, groupIndex: number) => {
-    const group = roundsData[roundIndex][groupIndex];
-    const newGenerals = [...warehouseGenerals];
-    const newTactics = [...warehouseTactics];
-
-    group.forEach(slot => {
-      if (slot) {
-        if (slot.type === 'general') newGenerals.push(slot.data);
-        if (slot.type === 'tactic') newTactics.push(slot.data);
-      }
-    });
-
-    setWarehouseGenerals(newGenerals);
-    setWarehouseTactics(newTactics);
-
     const newSelected = [...selectedGroups];
     newSelected[roundIndex] = groupIndex;
     setSelectedGroups(newSelected);
+    saveToLocalStorage(roundsData, newSelected);
 
     if (roundIndex < 5) {
       setCurrentRound(roundIndex + 1);
@@ -101,11 +229,42 @@ export default function MockBattle({ allGenerals, allTactics }: MockBattleProps)
             </button>
           </div>
           <div className="flex-1 overflow-y-auto grid grid-cols-3 sm:grid-cols-4 gap-2 content-start">
-            {warehouseGenerals.map((g, i) => (
-              <div key={i} className="aspect-square bg-surface-container-highest rounded-lg flex items-center justify-center text-sm font-bold border border-outline-variant/30 text-center p-1 relative group">
+            {/* Selected from rounds */}
+            {selectedGroups.flatMap((groupIndex, roundIndex) => {
+              if (groupIndex === null) return [];
+              return roundsData[roundIndex][groupIndex]
+                .filter(slot => slot?.type === 'general')
+                .map((slot, i) => (
+                  <div 
+                    key={`round-${roundIndex}-${i}`} 
+                    onClick={() => setSimulationItem(slot!)}
+                    className={`aspect-square rounded-lg flex items-center justify-center text-sm font-bold border border-primary/30 bg-primary/5 text-center p-1 relative group cursor-pointer transition-all ${
+                      simulationItem?.data.name === slot!.data.name ? 'ring-2 ring-primary ring-offset-2' : ''
+                    }`}
+                  >
+                    {slot!.data.name}
+                    <div className="absolute -top-1 -left-1 bg-primary text-on-primary text-[8px] px-1 rounded-full">
+                      R{roundIndex + 1}
+                    </div>
+                  </div>
+                ));
+            })}
+            {/* Manually added */}
+            {manuallyAddedGenerals.map((g, i) => (
+              <div 
+                key={`manual-${i}`} 
+                onClick={() => setSimulationItem({ type: 'general', data: g })}
+                className={`aspect-square rounded-lg flex items-center justify-center text-sm font-bold border border-outline-variant/30 text-center p-1 relative group cursor-pointer transition-all ${
+                  simulationItem?.data.name === g.name ? 'bg-primary text-on-primary ring-2 ring-primary ring-offset-2' : 'bg-surface-container-highest'
+                }`}
+              >
                 {g.name}
                 <button 
-                  onClick={() => setWarehouseGenerals(prev => prev.filter((_, idx) => idx !== i))}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setManuallyAddedGenerals(prev => prev.filter((_, idx) => idx !== i));
+                    if (simulationItem?.data.name === g.name) setSimulationItem(null);
+                  }}
                   className="absolute -top-2 -right-2 bg-error text-on-error rounded-full p-0.5 hidden group-hover:block z-10"
                 >
                   <X className="w-3 h-3" />
@@ -130,11 +289,42 @@ export default function MockBattle({ allGenerals, allTactics }: MockBattleProps)
             </button>
           </div>
           <div className="flex-1 overflow-y-auto grid grid-cols-3 sm:grid-cols-4 gap-2 content-start">
-            {warehouseTactics.map((t, i) => (
-              <div key={i} className="aspect-square bg-surface-container-highest rounded-lg flex items-center justify-center text-sm font-bold border border-outline-variant/30 text-center p-1 relative group">
+            {/* Selected from rounds */}
+            {selectedGroups.flatMap((groupIndex, roundIndex) => {
+              if (groupIndex === null) return [];
+              return roundsData[roundIndex][groupIndex]
+                .filter(slot => slot?.type === 'tactic')
+                .map((slot, i) => (
+                  <div 
+                    key={`round-${roundIndex}-${i}`} 
+                    onClick={() => setSimulationItem(slot!)}
+                    className={`aspect-square rounded-lg flex items-center justify-center text-sm font-bold border border-tertiary/30 bg-tertiary/5 text-center p-1 relative group cursor-pointer transition-all ${
+                      simulationItem?.data.name === slot!.data.name ? 'ring-2 ring-tertiary ring-offset-2' : ''
+                    }`}
+                  >
+                    {slot!.data.name}
+                    <div className="absolute -top-1 -left-1 bg-tertiary text-on-tertiary text-[8px] px-1 rounded-full">
+                      R{roundIndex + 1}
+                    </div>
+                  </div>
+                ));
+            })}
+            {/* Manually added */}
+            {manuallyAddedTactics.map((t, i) => (
+              <div 
+                key={`manual-${i}`} 
+                onClick={() => setSimulationItem({ type: 'tactic', data: t })}
+                className={`aspect-square rounded-lg flex items-center justify-center text-sm font-bold border border-outline-variant/30 text-center p-1 relative group cursor-pointer transition-all ${
+                  simulationItem?.data.name === t.name ? 'bg-tertiary text-on-tertiary ring-2 ring-tertiary ring-offset-2' : 'bg-surface-container-highest'
+                }`}
+              >
                 {t.name}
                 <button 
-                  onClick={() => setWarehouseTactics(prev => prev.filter((_, idx) => idx !== i))}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setManuallyAddedTactics(prev => prev.filter((_, idx) => idx !== i));
+                    if (simulationItem?.data.name === t.name) setSimulationItem(null);
+                  }}
                   className="absolute -top-2 -right-2 bg-error text-on-error rounded-full p-0.5 hidden group-hover:block z-10"
                 >
                   <X className="w-3 h-3" />
@@ -147,106 +337,277 @@ export default function MockBattle({ allGenerals, allTactics }: MockBattleProps)
 
       {/* Right: Selection Area */}
       <div className="w-2/3 bg-surface-container-low rounded-2xl p-6 flex flex-col border border-outline-variant/20 shadow-sm">
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
-          {Array(6).fill(0).map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setCurrentRound(i)}
-              className={`px-6 py-2.5 rounded-xl font-bold whitespace-nowrap transition-all ${
-                currentRound === i 
-                  ? 'bg-primary text-on-primary shadow-md' 
-                  : selectedGroups[i] !== null
-                    ? 'bg-surface-container-highest text-primary/70 border border-primary/20'
-                    : 'bg-surface-container-highest text-outline hover:text-on-surface hover:bg-surface-container-highest/80'
-              }`}
-            >
-              第 {i + 1} 轮
-              {selectedGroups[i] !== null && <Check className="w-4 h-4 inline-block ml-2" />}
-            </button>
-          ))}
-        </div>
-
-        {/* Groups */}
-        <div className="flex-1 overflow-y-auto flex flex-col gap-4 pr-2">
-          {roundsData[currentRound].map((group, groupIndex) => {
-            const isRoundCompleted = selectedGroups[currentRound] !== null;
-            const isSelected = selectedGroups[currentRound] === groupIndex;
-            const isDisabled = isRoundCompleted && !isSelected;
-
-            return (
-              <div 
-                key={groupIndex} 
-                className={`p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${
-                  isSelected 
-                    ? 'border-primary bg-primary/5' 
-                    : isDisabled 
-                      ? 'border-outline-variant/20 opacity-50 grayscale' 
-                      : 'border-outline-variant/30 bg-surface-container-lowest hover:border-primary/30'
-                }`}
-              >
-                <div className="w-12 h-12 rounded-full bg-surface-container-highest flex items-center justify-center font-bold text-lg text-outline shrink-0">
-                  {groupIndex + 1}
-                </div>
-                
-                <div className="flex-1 flex gap-4">
-                  {group.map((slot, slotIndex) => (
-                    <button
-                      key={slotIndex}
-                      disabled={isRoundCompleted}
-                      onClick={() => handleOpenModal('slot', currentRound, groupIndex, slotIndex)}
-                      className={`flex-1 aspect-[2/1] rounded-lg border-2 border-dashed flex items-center justify-center transition-colors relative group ${
-                        slot 
-                          ? 'border-solid border-primary/30 bg-surface-container-highest' 
-                          : 'border-outline-variant/50 hover:border-primary/50 hover:bg-surface-container-highest'
-                      }`}
-                    >
-                      {slot ? (
-                        <>
-                          <div className="flex flex-col items-center gap-1 p-2 text-center">
-                            <span className="text-xs text-outline font-medium">
-                              {slot.type === 'general' ? '武将' : '战法'}
-                            </span>
-                            <span className="font-bold text-sm line-clamp-2">{slot.data.name}</span>
-                          </div>
-                          {!isRoundCompleted && (
-                            <div 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const newRounds = [...roundsData];
-                                newRounds[currentRound][groupIndex][slotIndex] = null;
-                                setRoundsData(newRounds);
-                              }}
-                              className="absolute -top-2 -right-2 bg-error text-on-error rounded-full p-0.5 hidden group-hover:block z-10"
-                            >
-                              <X className="w-3 h-3" />
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <Plus className="w-6 h-6 text-outline-variant" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-
+        {/* Tabs & Switch */}
+        <div className="flex items-center justify-between mb-2">
+          {viewMode === 'rounds' && (
+            <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide">
+              {Array(6).fill(0).map((_, i) => (
                 <button
-                  disabled={isRoundCompleted}
-                  onClick={() => handleSelectGroup(currentRound, groupIndex)}
-                  className={`px-6 py-3 rounded-xl font-bold transition-all shrink-0 ${
-                    isSelected
-                      ? 'bg-primary text-on-primary'
-                      : isDisabled
-                        ? 'bg-surface-container-highest text-outline-variant cursor-not-allowed'
-                        : 'bg-secondary text-on-secondary hover:shadow-md hover:brightness-110'
+                  key={i}
+                  onClick={() => { setViewMode('rounds'); setCurrentRound(i); }}
+                  className={`px-3 py-1 rounded-lg font-bold text-xs whitespace-nowrap transition-all ${
+                    currentRound === i && viewMode === 'rounds'
+                      ? 'bg-primary text-on-primary' 
+                      : selectedGroups[i] !== null
+                        ? 'bg-primary/10 text-primary'
+                        : 'bg-surface-container-highest text-gray-600'
                   }`}
                 >
-                  {isSelected ? '已选择' : '选择此组'}
+                  第 {i + 1} 轮
                 </button>
-              </div>
-            );
-          })}
+              ))}
+            </div>
+          )}
+          <button
+            onClick={() => setViewMode(viewMode === 'rounds' ? 'recommendations' : 'rounds')}
+            className={`px-3 py-1 bg-secondary text-on-secondary rounded-lg font-bold text-xs whitespace-nowrap hover:bg-secondary/90 transition-colors ${viewMode === 'recommendations' ? 'ml-auto' : ''}`}
+          >
+            {viewMode === 'rounds' ? '阵容推荐' : '选择武将战法'}
+          </button>
         </div>
+
+        {/* Groups / Recommendations */}
+        <div className="flex-1 overflow-y-auto flex flex-col gap-4 pr-2">
+          {viewMode === 'rounds' ? (
+            roundsData[currentRound].map((group, groupIndex) => {
+              const isSelected = selectedGroups[currentRound] === groupIndex;
+              
+              return (
+                <div 
+                  key={groupIndex} 
+                  className={`p-4 rounded-xl border-2 transition-all flex items-center gap-4 relative ${
+                    isSelected 
+                      ? 'border-primary bg-primary/5' 
+                      : 'border-outline-variant/30 bg-surface-container-lowest hover:border-primary/30'
+                  }`}
+                >
+                  <div className="w-12 h-12 rounded-full bg-surface-container-highest flex items-center justify-center font-bold text-lg text-gray-700 shrink-0">
+                    {groupIndex + 1}
+                  </div>
+                  
+                  <div className="flex-1 flex gap-4">
+                    {group.map((slot, slotIndex) => {
+                      const matchInfo = getBestMatchForSlot(slot);
+                      const isSlotSelected = slot && simulationItem?.data.name === slot.data.name && simulationItem?.type === slot.type;
+                      return (
+                        <div key={slotIndex} className="flex-1 flex flex-col gap-1">
+                          <button
+                            onClick={() => {
+                              if (slot) {
+                                setSimulationItem(slot);
+                              } else {
+                                handleOpenModal('slot', currentRound, groupIndex, slotIndex);
+                              }
+                            }}
+                            className={`w-full aspect-[2/1] rounded-lg border-2 border-dashed flex items-center justify-center transition-colors relative group overflow-hidden ${
+                              slot 
+                                ? isSlotSelected
+                                  ? 'border-solid border-primary bg-primary/10'
+                                  : 'border-solid border-primary/30 bg-surface-container-highest hover:border-primary/50'
+                                : 'border-outline-variant/50 hover:border-primary/50 hover:bg-surface-container-highest'
+                            }`}
+                          >
+                            {slot ? (
+                              <>
+                                {matchInfo && matchInfo.maxScore > 0 && (
+                                  <div className="absolute top-1 left-1/2 -translate-x-1/2 text-[10px] text-green-700 font-bold whitespace-nowrap">
+                                    匹配度: {matchInfo.maxScore}%
+                                  </div>
+                                )}
+                                <div className="flex flex-col items-center gap-1 p-2 text-center mt-3">
+                                  <span className="text-xs text-gray-500 font-bold">
+                                    {slot.type === 'general' ? '武将' : '战法'}
+                                  </span>
+                                  <span className="font-bold text-sm text-gray-900 line-clamp-2">{slot.data.name}</span>
+                                </div>
+                                <div 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenModal('slot', currentRound, groupIndex, slotIndex);
+                                  }}
+                                  className="absolute -top-2 -right-2 bg-primary text-on-primary rounded-full p-1 hidden group-hover:block z-10 shadow-sm"
+                                  title="切换"
+                                >
+                                  <RefreshCw className="w-3 h-3" />
+                                </div>
+                              </>
+                            ) : (
+                              <div className="flex flex-col items-center gap-1">
+                                <Plus className="w-6 h-6 text-gray-400" />
+                                <span className="text-sm font-bold text-gray-500">添加</span>
+                              </div>
+                            )}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <button
+                    onClick={() => handleSelectGroup(currentRound, groupIndex)}
+                    className={`px-6 py-3 rounded-xl font-bold transition-all shrink-0 ${
+                      isSelected
+                        ? 'bg-primary text-on-primary'
+                        : 'bg-secondary text-on-secondary hover:shadow-md hover:brightness-110'
+                    }`}
+                  >
+                    {isSelected ? '已选择' : '选择此组'}
+                  </button>
+                </div>
+              );
+            })
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              {normalizedTeams
+                .map(team => ({ team, score: calculateMatchScore(team) }))
+                .filter(item => item.score > 0)
+                .sort((a, b) => b.score - a.score)
+                .map(({ team, score }, idx) => (
+                  <div key={idx} className="bg-surface-container-lowest border border-outline-variant/20 rounded-xl p-4 shadow-sm">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-bold text-sm text-gray-900">{team.name}</h4>
+                        {team.badge && (
+                          <span className="inline-block px-2 py-0.5 bg-surface-container-high text-outline text-[10px] font-bold rounded-sm">
+                            {team.badge}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs font-bold text-green-700 bg-green-100 px-2 py-1 rounded-full">
+                        匹配度: {score}%
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      {team.generals.map((gen: any, gIdx: number) => {
+                        const hasGeneral = warehouseGenerals.some(g => g.name === gen.name);
+                        return (
+                          <div key={gIdx} className="text-xs flex items-center gap-2">
+                            <span className={`font-bold ${hasGeneral ? 'text-green-600' : 'text-gray-700'}`}>{gen.name}</span>
+                            <div className="flex flex-wrap gap-1">
+                              {gen.tactics.map((tac: string, tIdx: number) => {
+                                const hasTactic = warehouseTactics.some(t => t.name === tac);
+                                return (
+                                  <span key={tIdx} className={`px-1.5 py-0.5 rounded text-[10px] ${hasTactic ? 'bg-green-100 text-green-700' : 'bg-surface-container-highest text-gray-500'}`}>
+                                    {tac}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+
+        {/* Simulation Module */}
+        {viewMode === 'rounds' && simulationItem && (
+          <div className="mt-6 pt-6 border-t border-outline-variant/20">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-lg flex items-center gap-2 text-gray-900">
+                <Search className="w-5 h-5 text-primary" />
+                关联阵容: {simulationItem.data.name}
+              </h3>
+              <button 
+                onClick={() => setSimulationItem(null)}
+                className="text-xs text-gray-500 hover:text-primary font-medium"
+              >
+                清除演算
+              </button>
+            </div>
+            
+            {(() => {
+              const matchingTeams = normalizedTeams.filter(team => {
+                if (simulationItem.type === 'general') {
+                  return team.generals?.some((g: any) => g.name === simulationItem.data.name);
+                } else {
+                  return team.generals?.some((g: any) => g.tactics?.includes(simulationItem.data.name));
+                }
+              });
+
+              if (matchingTeams.length === 0) {
+                return (
+                  <div className="text-center text-outline py-8 bg-surface-container-lowest rounded-xl border border-outline-variant/30">
+                    无关联阵容
+                  </div>
+                );
+              }
+
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {matchingTeams.map((team, idx) => {
+                    const score = calculateMatchScore(team, simulationItem);
+                    // Only filter out if score is 0 AND it's not the simulation item itself
+                    // But the user said "若只有自己，则不算", so if score is 0, it's not a match.
+                    if (score === 0) return null;
+
+                    const warehouseGeneralNames = [
+                      ...manuallyAddedGenerals,
+                      ...selectedGroups.flatMap((groupIndex, roundIndex) => {
+                        if (groupIndex === null) return [];
+                        return roundsData[roundIndex][groupIndex]
+                          .filter(slot => slot?.type === 'general')
+                          .map(slot => slot!.data);
+                      }),
+                      ...(simulationItem?.type === 'general' ? [simulationItem.data] : [])
+                    ].map(g => g.name);
+
+                    const warehouseTacticNames = [
+                      ...manuallyAddedTactics,
+                      ...selectedGroups.flatMap((groupIndex, roundIndex) => {
+                        if (groupIndex === null) return [];
+                        return roundsData[roundIndex][groupIndex]
+                          .filter(slot => slot?.type === 'tactic')
+                          .map(slot => slot!.data);
+                      }),
+                      ...(simulationItem?.type === 'tactic' ? [simulationItem.data] : [])
+                    ].map(t => t.name);
+
+                    return (
+                      <div key={idx} className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-gray-900">{team.name}</h4>
+                            {team.badge && (
+                              <span className="inline-block px-2 py-0.5 bg-surface-container-high text-outline text-[10px] font-bold rounded-sm">
+                                {team.badge}
+                              </span>
+                            )}
+                          </div>
+                          <span className={`text-xs font-bold px-2 py-1 rounded-full ${score > 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                            匹配度: {score}%
+                          </span>
+                        </div>
+                        <div className="space-y-2">
+                          {team.generals.map((gen: any, gIdx: number) => (
+                            <div key={gIdx} className="text-xs flex items-center gap-2">
+                              <span className={`font-bold whitespace-nowrap ${warehouseGeneralNames.includes(gen.name) ? 'text-green-600' : 'text-gray-700'}`}>
+                                {gen.name}
+                              </span>
+                              <div className="flex flex-wrap gap-1 overflow-x-auto whitespace-nowrap max-w-[200px] scrollbar-hide">
+                                {gen.tactics.map((tac: string, tIdx: number) => (
+                                  <span 
+                                    key={tIdx} 
+                                    className={`px-1.5 py-0.5 rounded bg-surface-container-highest border border-outline-variant/20 ${warehouseTacticNames.includes(tac) ? 'text-green-600 font-bold' : 'text-gray-500'}`}
+                                  >
+                                    {tac}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+        )}
       </div>
 
       {/* Modal */}

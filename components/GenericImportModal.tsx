@@ -7,8 +7,8 @@ interface GenericImportModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  onImport: (data: any[]) => { success: number; duplicate: number; failed: number };
-  validateData: (data: any) => any[];
+  onImport: (data: any) => { success: number; duplicate: number; failed: number };
+  validateData: (data: any) => any;
 }
 
 export default function GenericImportModal({ 
@@ -21,7 +21,7 @@ export default function GenericImportModal({
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [isValid, setIsValid] = useState(false);
-  const [parsedData, setParsedData] = useState<any[]>([]);
+  const [parsedData, setParsedData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<{ success: number; duplicate: number; failed: number } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -191,10 +191,10 @@ export default function GenericImportModal({
                 </div>
               )}
 
-              {isValid && (
+              {isValid && parsedData && (
                 <div className="bg-green-50 p-4 rounded-xl border border-green-100 flex items-start gap-3">
                   <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
-                  <p className="text-sm text-green-700 font-medium">文件校验成功，共识别出 {parsedData.length} 个项目。</p>
+                  <p className="text-sm text-green-700 font-medium">文件校验成功，共识别出 {Array.isArray(parsedData) ? parsedData.length : ((parsedData.generals?.length || 0) + (parsedData.tactics?.length || 0))} 个项目。</p>
                 </div>
               )}
 
