@@ -1,0 +1,40 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme {
+  --color-primary: #760009;
+  --color-primary-container: #991b1b;
+  --color-secondary: #735c00;
+  --color-secondary-container: #fed65b;
+  --color-on-secondary-container: #745c00;
+  --color-surface: #f7f9fb;
+  --color-surface-container-low: #f2f4f6;
+  --color-surface-container-highest: #e0e3e5;
+  --color-surface-container-lowest: #ffffff;
+  --color-on-surface: #191c1e;
+  --color-on-surface-variant: #59413e;
+  --color-outline: #8d706d;
+  --color-outline-variant: #e1bfbb;
+  --color-tertiary: #003a5c;
+
+  --font-headline: var(--font-headline), sans-serif;
+  --font-body: var(--font-body), sans-serif;
+}
+
+body {
+  background-color: var(--color-surface);
+  color: var(--color-on-surface);
+  line-height: 1.7;
+}
+
+/* Hide scrollbar for cleaner look in lists */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-container-highest);
+  border-radius: 10px;
+}
