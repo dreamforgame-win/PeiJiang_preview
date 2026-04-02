@@ -111,6 +111,44 @@ export default function Page() {
     setMounted(true);
   }, []);
 
+  // Data Migration: Rename 甄姬 to 甄洛
+  useEffect(() => {
+    if (mounted) {
+      const migrateName = (name: string) => name === '甄姬' ? '甄洛' : name;
+      
+      // 1. Migrate collectedGenerals
+      const hasOldGeneral = collectedGenerals.includes('甄姬');
+      if (hasOldGeneral) {
+        setCollectedGenerals(prev => prev.map(migrateName));
+      }
+      
+      // 2. Migrate allTeams
+      const needsTeamMigration = allTeams.some(team => 
+        team.desc.includes('甄姬') || 
+        team.config.some((c: any) => c.武将 === '甄姬')
+      );
+      if (needsTeamMigration) {
+        setAllTeams(prev => prev.map(team => ({
+          ...team,
+          desc: team.desc.replace(/甄姬/g, '甄洛'),
+          config: team.config.map((c: any) => ({
+            ...c,
+            武将: migrateName(c.武将)
+          }))
+        })));
+      }
+      
+      // 3. Migrate customGenerals
+      const hasOldCustomGeneral = customGenerals.some(g => g.name === '甄姬');
+      if (hasOldCustomGeneral) {
+        setCustomGenerals(prev => prev.map(g => ({
+          ...g,
+          name: migrateName(g.name)
+        })));
+      }
+    }
+  }, [mounted, collectedGenerals, allTeams, customGenerals, setCollectedGenerals, setAllTeams, setCustomGenerals]);
+
   const handleGeneralClick = (name: string) => {
     const general = wujiangData.find(w => w.name === name);
     if (general) setSelectedGeneral(general);

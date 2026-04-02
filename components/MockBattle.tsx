@@ -32,7 +32,7 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
     localStorage.setItem('mockBattleManuallyAddedGenerals', JSON.stringify(manuallyAddedGenerals));
     localStorage.setItem('mockBattleManuallyAddedTactics', JSON.stringify(manuallyAddedTactics));
   }, [manuallyAddedGenerals, manuallyAddedTactics]);
-  
+
   const [viewMode, setViewMode] = useState<'rounds' | 'recommendations'>('rounds');
   const [currentRound, setCurrentRound] = useState(0);
   // roundsData[roundIndex][groupIndex][slotIndex]
@@ -50,6 +50,31 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
     }
     return Array(6).fill(null);
   });
+
+  // Data Migration: Rename 甄姬 to 甄洛
+  useEffect(() => {
+    const migrateName = (name: string) => name === '甄姬' ? '甄洛' : name;
+    
+    if (manuallyAddedGenerals.some(g => g.name === '甄姬')) {
+      setManuallyAddedGenerals(prev => prev.map(g => ({ ...g, name: migrateName(g.name) })));
+    }
+    
+    let roundsChanged = false;
+    const newRoundsData = roundsData.map(round => 
+      round.map(group => 
+        group.map(slot => {
+          if (slot?.type === 'general' && slot.data.name === '甄姬') {
+            roundsChanged = true;
+            return { ...slot, data: { ...slot.data, name: '甄洛' } };
+          }
+          return slot;
+        })
+      )
+    );
+    if (roundsChanged) {
+      setRoundsData(newRoundsData);
+    }
+  }, [manuallyAddedGenerals, roundsData]);
 
   // Derived warehouse state
   const warehouseGenerals = [
@@ -75,6 +100,25 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
   const saveToLocalStorage = (rounds: any, groups: any) => {
     localStorage.setItem('mockBattleRoundsData', JSON.stringify(rounds));
     localStorage.setItem('mockBattleSelectedGroups', JSON.stringify(groups));
+  };
+
+  const [resetConfirm, setResetConfirm] = useState(false);
+
+  const handleReset = () => {
+    setManuallyAddedGenerals([]);
+    setManuallyAddedTactics([]);
+    const initialRoundsData = Array(6).fill(null).map(() => Array(3).fill(null).map(() => Array(3).fill(null)));
+    setRoundsData(initialRoundsData);
+    const initialSelectedGroups = Array(6).fill(null);
+    setSelectedGroups(initialSelectedGroups);
+    setSimulationItem(null);
+    setCurrentRound(0);
+    setResetConfirm(false);
+    
+    localStorage.removeItem('mockBattleManuallyAddedGenerals');
+    localStorage.removeItem('mockBattleManuallyAddedTactics');
+    localStorage.removeItem('mockBattleRoundsData');
+    localStorage.removeItem('mockBattleSelectedGroups');
   };
 
   const normalizedTeams = useMemo(() => {
@@ -337,34 +381,76 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
 
       {/* Right: Selection Area */}
       <div className="w-2/3 bg-surface-container-low rounded-2xl p-6 flex flex-col border border-outline-variant/20 shadow-sm">
-        {/* Tabs & Switch */}
-        <div className="flex items-center justify-between mb-2">
-          {viewMode === 'rounds' && (
-            <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide">
-              {Array(6).fill(0).map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => { setViewMode('rounds'); setCurrentRound(i); }}
-                  className={`px-3 py-1 rounded-lg font-bold text-xs whitespace-nowrap transition-all ${
-                    currentRound === i && viewMode === 'rounds'
-                      ? 'bg-primary text-on-primary' 
-                      : selectedGroups[i] !== null
-                        ? 'bg-primary/10 text-primary'
-                        : 'bg-surface-container-highest text-gray-600'
-                  }`}
-                >
-                  第 {i + 1} 轮
-                </button>
-              ))}
+        {/* Tabs & Reset */}
+        <div className="flex items-center justify-between mb-4 border-b border-outline-variant/20 pb-2">
+          <div className="flex bg-surface-container-highest rounded-xl p-1">
+            <button
+              onClick={() => setViewMode('rounds')}
+              className={`px-6 py-2 rounded-lg font-bold text-sm transition-all ${
+                viewMode === 'rounds'
+                  ? 'bg-surface shadow-sm text-primary'
+                  : 'text-outline hover:text-on-surface'
+              }`}
+            >
+              选择武将战法
+            </button>
+            <button
+              onClick={() => setViewMode('recommendations')}
+              className={`px-6 py-2 rounded-lg font-bold text-sm transition-all ${
+                viewMode === 'recommendations'
+                  ? 'bg-surface shadow-sm text-primary'
+                  : 'text-outline hover:text-on-surface'
+              }`}
+            >
+              阵容推荐
+            </button>
+          </div>
+          {resetConfirm ? (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleReset}
+                className="px-3 py-1.5 bg-error text-on-error rounded-lg font-bold text-xs hover:brightness-110 transition-all"
+              >
+                确定重置
+              </button>
+              <button
+                onClick={() => setResetConfirm(false)}
+                className="px-3 py-1.5 bg-surface-container-highest text-outline rounded-lg font-bold text-xs hover:text-on-surface transition-all"
+              >
+                取消
+              </button>
             </div>
+          ) : (
+            <button
+              onClick={() => setResetConfirm(true)}
+              className="flex items-center gap-1 px-3 py-2 text-error hover:bg-error/10 rounded-lg transition-colors font-bold text-sm"
+            >
+              <RefreshCw className="w-4 h-4" />
+              重置全部
+            </button>
           )}
-          <button
-            onClick={() => setViewMode(viewMode === 'rounds' ? 'recommendations' : 'rounds')}
-            className={`px-3 py-1 bg-secondary text-on-secondary rounded-lg font-bold text-xs whitespace-nowrap hover:bg-secondary/90 transition-colors ${viewMode === 'recommendations' ? 'ml-auto' : ''}`}
-          >
-            {viewMode === 'rounds' ? '阵容推荐' : '选择武将战法'}
-          </button>
         </div>
+
+        {/* Round Selection Tabs (only visible in rounds mode) */}
+        {viewMode === 'rounds' && (
+          <div className="flex gap-1 overflow-x-auto pb-4 scrollbar-hide">
+            {Array(6).fill(0).map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrentRound(i)}
+                className={`px-4 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap transition-all border-2 ${
+                  currentRound === i
+                    ? 'bg-primary border-primary text-on-primary shadow-sm' 
+                    : selectedGroups[i] !== null
+                      ? 'bg-primary/5 border-primary/20 text-primary'
+                      : 'bg-surface-container-highest border-transparent text-gray-500'
+                }`}
+              >
+                第 {i + 1} 轮
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Groups / Recommendations */}
         <div className="flex-1 overflow-y-auto flex flex-col gap-4 pr-2">
