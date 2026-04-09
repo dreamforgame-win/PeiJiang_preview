@@ -31,14 +31,21 @@ export default function ZhanfaLibrary({
 }: ZhanfaLibraryProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('全部');
+  const [seasonFilter, setSeasonFilter] = useState<string>('全部');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedTactic, setSelectedTactic] = useState<typeof zhanfaData[0] | null>(null);
 
   const types = ['全部', ...Array.from(new Set(allTactics.map(z => z.type)))];
+  const seasons = ['全部', ...Array.from(new Set(allTactics.map(z => z.season).filter(Boolean)))].sort((a, b) => {
+    if (a === '全部') return -1;
+    if (b === '全部') return 1;
+    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+  });
 
   const filteredZhanfa = allTactics.filter(z => 
     (z.name.toLowerCase().includes(searchQuery.toLowerCase()) || z.description.toLowerCase().includes(searchQuery.toLowerCase())) &&
-    (typeFilter === '全部' || z.type === typeFilter)
+    (typeFilter === '全部' || z.type === typeFilter) &&
+    (seasonFilter === '全部' || z.season === seasonFilter)
   ).sort((a, b) => {
     const aCollected = collectedTactics.includes(a.name);
     const bCollected = collectedTactics.includes(b.name);
@@ -104,11 +111,19 @@ export default function ZhanfaLibrary({
           </div>
 
           {showFilters && (
-            <div className="bg-surface-container-lowest p-4 rounded-lg mb-2">
-              <label className="block text-xs font-bold text-outline uppercase mb-2">战法类型</label>
-              <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="bg-surface p-2 rounded-md text-sm">
-                {types.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+            <div className="bg-surface-container-lowest p-4 rounded-lg mb-2 flex gap-6">
+              <div>
+                <label className="block text-xs font-bold text-outline uppercase mb-2">战法类型</label>
+                <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="bg-surface p-2 rounded-md text-sm">
+                  {types.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-outline uppercase mb-2">赛季</label>
+                <select value={seasonFilter} onChange={(e) => setSeasonFilter(e.target.value)} className="bg-surface p-2 rounded-md text-sm">
+                  {seasons.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
             </div>
           )}
         </div>

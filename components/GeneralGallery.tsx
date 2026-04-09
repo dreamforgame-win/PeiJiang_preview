@@ -32,17 +32,24 @@ export default function GeneralGallery({
   const [searchQuery, setSearchQuery] = useState('');
   const [factionFilter, setFactionFilter] = useState<string>('全部');
   const [armFilter, setArmFilter] = useState<string>('全部');
+  const [seasonFilter, setSeasonFilter] = useState<string>('全部');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedGeneral, setSelectedGeneral] = useState<typeof wujiangData[0] | null>(null);
 
   const factions = ['全部', ...Array.from(new Set(allGenerals.map(w => w.faction)))];
   const arms = ['全部', ...Array.from(new Set(allGenerals.flatMap(w => w.arms)))];
+  const seasons = ['全部', ...Array.from(new Set(allGenerals.map(w => w.season).filter(Boolean)))].sort((a, b) => {
+    if (a === '全部') return -1;
+    if (b === '全部') return 1;
+    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+  });
 
   const filteredGenerals = allGenerals.filter(w => {
     const matchesSearch = w.name.includes(searchQuery) || w.innate_skill.name.includes(searchQuery);
     const matchesFaction = factionFilter === '全部' || w.faction === factionFilter;
     const matchesArm = armFilter === '全部' || w.arms.includes(armFilter);
-    return matchesSearch && matchesFaction && matchesArm;
+    const matchesSeason = seasonFilter === '全部' || w.season === seasonFilter;
+    return matchesSearch && matchesFaction && matchesArm && matchesSeason;
   }).sort((a, b) => {
     const aCollected = collectedGenerals.includes(a.name);
     const bCollected = collectedGenerals.includes(b.name);
@@ -120,6 +127,12 @@ export default function GeneralGallery({
                 {arms.map(a => <option key={a} value={a}>{a}</option>)}
               </select>
             </div>
+            <div>
+              <label className="block text-xs font-bold text-outline uppercase mb-2">赛季</label>
+              <select value={seasonFilter} onChange={(e) => setSeasonFilter(e.target.value)} className="bg-surface p-2 rounded-md text-sm">
+                {seasons.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
           </div>
         )}
         </div>
@@ -181,6 +194,33 @@ export default function GeneralGallery({
                       <span>概率: {general.innate_skill.probability * 100}%</span>
                     </div>
                   </div>
+
+                  {general.bonds && general.bonds.length > 0 && (
+                    <div className="pt-2 border-t border-outline-variant/20 space-y-2">
+                      <p className="text-[10px] font-bold text-outline uppercase">武将缘分</p>
+                      {general.bonds.map((aff: any, i: number) => (
+                        <div key={i} className="bg-surface-container-low p-2 rounded-lg">
+                          <p className="text-[10px] font-bold text-secondary">{aff.name}</p>
+                          <p className="text-[9px] text-on-surface-variant mb-1">{aff.description}</p>
+                          <div className="flex flex-wrap gap-1">
+                            {aff.generals.map((gName: string) => (
+                              <button 
+                                key={gName}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const target = allGenerals.find(g => g.name === gName);
+                                  if (target) setSelectedGeneral(target);
+                                }}
+                                className="text-[9px] px-1.5 py-0.5 bg-surface-container-high hover:bg-primary hover:text-white rounded transition-colors"
+                              >
+                                {gName}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -204,13 +244,58 @@ export default function GeneralGallery({
           isCollected={collectedGenerals.includes(selectedGeneral.name)}
           onToggleCollect={() => toggleCollectGeneral(selectedGeneral.name)}
         >
-          <div className="space-y-4">
-            <p className="text-sm text-on-surface-variant">阵营: {selectedGeneral.faction}</p>
-            <p className="text-sm text-on-surface-variant">兵种: {selectedGeneral.arms.join(', ')}</p>
-            <div className="bg-surface-container-low p-4 rounded-lg">
-              <p className="font-bold text-primary mb-2">{selectedGeneral.innate_skill.name}</p>
-              <p className="text-xs text-on-surface-variant">{selectedGeneral.innate_skill.description}</p>
+          <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+            <div className="grid grid-cols-2 gap-4">
+              <p className="text-sm text-on-surface-variant">阵营: {selectedGeneral.faction}</p>
+              <p className="text-sm text-on-surface-variant">兵种: {selectedGeneral.arms.join(', ')}</p>
             </div>
+            
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              {selectedGeneral.base_stats && Object.entries(selectedGeneral.base_stats).map(([stat, value]) => (
+                <div key={stat} className="flex justify-between bg-surface-container-low p-2 rounded">
+                  <span className="text-outline">{stat}</span>
+                  <span className="font-bold text-on-surface">{value as any}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-surface-container-low p-4 rounded-lg">
+              <p className="font-bold text-primary mb-2 flex items-center gap-2">
+                <Swords className="w-4 h-4" />
+                {selectedGeneral.innate_skill.name}
+              </p>
+              <p className="text-xs text-on-surface-variant mb-2">{selectedGeneral.innate_skill.description}</p>
+              <div className="flex gap-4 text-[10px] text-outline font-bold">
+                <span>类型: {selectedGeneral.innate_skill.trigger}</span>
+                <span>概率: {selectedGeneral.innate_skill.probability * 100}%</span>
+              </div>
+            </div>
+
+            {selectedGeneral.bonds && selectedGeneral.bonds.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-sm font-bold text-on-surface border-b border-outline-variant/20 pb-1">武将缘分</p>
+                {selectedGeneral.bonds.map((aff: any, i: number) => (
+                  <div key={i} className="bg-surface-container-low p-3 rounded-lg border border-outline-variant/10">
+                    <p className="text-xs font-bold text-secondary mb-1">{aff.name}</p>
+                    <p className="text-[10px] text-on-surface-variant mb-2 leading-relaxed">{aff.description}</p>
+                    <div className="flex flex-wrap gap-1">
+                      {aff.generals.map((gName: string) => (
+                        <button 
+                          key={gName}
+                          onClick={() => {
+                            const target = allGenerals.find(g => g.name === gName);
+                            if (target) setSelectedGeneral(target);
+                          }}
+                          className="text-[10px] px-2 py-1 bg-surface-container-high hover:bg-primary hover:text-white rounded transition-colors"
+                        >
+                          {gName}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </DetailModal>
       )}
