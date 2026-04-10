@@ -1,546 +1,593 @@
 export const wujiangData = [
   {
-    "season": "s11",
-    "name": "祝融夫人",
-    "faction": "群",
-    "roles": [],
-    "arms": ["骑兵"],
-    "base_stats": { "武力": 112, "智力": 72, "统率": 91, "先攻": 82 },
-    "innate_skill": {
-      "season": "s11",
-      "name": "南疆烈刃",
-      "description": "...",
-      "trigger": "主动",
-      "probability": 0.5
+    season: "S1",
+    name: "于禁",
+    faction: "魏",
+    roles: [],
+    arms: ["盾兵"],
+    base_stats: { 武力: 104, 智力: 81, 统率: 101, 先攻: 67 },
+    innate_skill: {
+      season: "S1",
+      name: "持军毅重",
+      description:
+        "自身统率提升30点,每回合首次受到伤害后使敌军随机两人受到伤害提升8%(受统率影响),并有60%概率使攻击者缴械,持续2回合",
+      trigger: "被动",
+      probability: 1.0,
     },
-    "bonds": [
-      {
-        "name": "南疆烽沏",
-        "description": "部队中缘分武将视作夷族，我军每存在一个夷族武将，全体夷族受到伤害降低6%",
-        "generals": ["孟获", "祝融夫人", "木鹿大王"]
-      }
-    ]
   },
   {
-    "season": "s10",
-    "name": "魏延",
-    "faction": "蜀",
-    "roles": [],
-    "arms": ["盾兵"],
-    "base_stats": { "武力": 118, "智力": 93, "统率": 102, "先攻": 56 },
-    "innate_skill": {
-      "season": "s10",
-      "name": "子午奇谋",
-      "description": "...",
-      "trigger": "主动",
-      "probability": 0.5
+    season: "S1",
+    name: "关平",
+    faction: "蜀",
+    roles: [],
+    arms: ["枪兵"],
+    base_stats: { 武力: 81, 智力: 73, 统率: 89, 先攻: 25 },
+    innate_skill: {
+      season: "S1",
+      name: "龙吟四海",
+      description:
+        "自身造成兵刃伤害后有37.75%概率触发龙吟:对日标施加畏惧，,持续2回合,若目标已处于畏惧状态，则改对其造成100%兵刃伤害。每回合可触发4次龙吟",
+      trigger: "被动",
+      probability: 1.0,
     },
-    "bonds": [
-      {
-        "name": "义烈同途",
-        "description": "部队中缘分武将行动时，有50%概率对敌军随机单体施加畏惧效果",
-        "generals": ["魏延", "黄忠"]
-      }
-    ]
   },
   {
-    "season": "s10",
-    "name": "卞夫人",
-    "faction": "魏",
-    "roles": [],
-    "arms": ["弓兵"],
-    "base_stats": { "武力": 19, "智力": 105, "统率": 106, "先攻": 57 },
-    "innate_skill": {
-      "season": "s10",
-      "name": "素衣约俭",
-      "description": "...",
-      "trigger": "主动",
-      "probability": 0.5
+    season: "S1",
+    name: "关羽",
+    faction: "蜀",
+    roles: [],
+    arms: ["骑兵"],
+    base_stats: { 武力: 120.0, 智力: 86.0, 统率: 104.0, 先攻: 79.0 },
+    innate_skill: {
+      season: "S1",
+      name: "威震华夏",
+      description:
+        "提升自身8%主动战法发动率,每有1个带有畏惧状态的敌军额外提升3%,持续2回合。然后对敌军全体造成160%兵刃伤害,若目标持有控制状态，则使目标产生逃兵(受武力影响)",
+      trigger: "主动",
+      probability: 1.0,
     },
-    "bonds": [
-      {
-        "name": "懿范长存",
-        "description": "部队中缘分武将前3回合受到兵刃伤害降低15%",
-        "generals": ["卞夫人", "曹丕"]
-      },
-      {
-        "name": "武皇宣后",
-        "description": "部队中缘分武将前3回合受到谋略伤害降低15%",
-        "generals": ["卞夫人", "曹操"]
-      }
-    ]
   },
   {
-    "season": "s9",
-    "name": "曹丕",
-    "faction": "魏",
-    "roles": [],
-    "arms": ["弓兵"],
-    "base_stats": { "武力": 89, "智力": 97, "统率": 103, "先攻": 62 },
-    "innate_skill": {
-      "season": "s9",
-      "name": "权御九锡",
-      "description": "...",
-      "trigger": "主动",
-      "probability": 0.5
+    season: "S1",
+    name: "典韦",
+    faction: "魏",
+    roles: [],
+    arms: ["枪兵"],
+    base_stats: { 武力: 104, 智力: 81, 统率: 101, 先攻: 67 },
+    innate_skill: {
+      season: "S1",
+      name: "古之来恶",
+      description:
+        "自身反击率提升60%,自身受到伤害后提升自身20%反击伤害和20点统率，持续2回合，可叠加5次",
+      trigger: "被动",
+      probability: 1.0,
     },
-    "bonds": [
-      {
-        "name": "嗣业承乾",
-        "description": "部队中缘分武将统率提升20点",
-        "generals": ["曹丕", "曹操"]
-      },
-      {
-        "name": "魏阙凝妆",
-        "description": "部队中缘分武将受到兵刃伤害降低6%",
-        "generals": ["曹丕", "甄洛"]
-      },
-      {
-        "name": "懿范长存",
-        "description": "部队中缘分武将前3回合受到兵刃伤害降低15%",
-        "generals": ["卞夫人", "曹丕"]
-      }
-    ]
   },
   {
-    "season": "s9",
-    "name": "高顺",
-    "faction": "群",
-    "roles": [],
-    "arms": ["盾兵"],
-    "base_stats": { "武力": 101, "智力": 78, "统率": 109, "先攻": 75 },
-    "innate_skill": {
-      "season": "s9",
-      "name": "誓死无退",
-      "description": "...",
-      "trigger": "主动",
-      "probability": 0.5
+    season: "S1",
+    name: "刘备",
+    faction: "蜀",
+    roles: [],
+    arms: ["盾兵"],
+    base_stats: { 武力: 88, 智力: 87, 统率: 86, 先攻: 40 },
+    innate_skill: {
+      season: "S1",
+      name: "携民渡江",
+      description:
+        "战斗开始时,提升我军全体18点统率(受智力影响),每回合结束时，恢复我军全体兵力(治疗率100%),然后驱散我军兵力最低单体1种负面状态并对其额外进行1次恢复(治疗率90%)",
+      trigger: "指挥",
+      probability: 1.0,
     },
-    "bonds": [
-      {
-        "name": "锋矢陷阵",
-        "description": "部队中缘分武将兵刃伤害提升5%",
-        "generals": ["吕布", "高顺"]
-      }
-    ]
   },
   {
-    "season": "s9",
-    "name": "凌统",
-    "faction": "吴",
-    "roles": [],
-    "arms": ["骑兵"],
-    "base_stats": { "武力": 102, "智力": 63, "统率": 89, "先攻": 90 },
-    "innate_skill": {
-      "season": "s9",
-      "name": "旋略勇进",
-      "description": "...",
-      "trigger": "主动",
-      "probability": 0.5
+    season: "S1",
+    name: "华佗",
+    faction: "群",
+    roles: [],
+    arms: ["弓兵"],
+    base_stats: { 武力: 41, 智力: 113, 统率: 87, 先攻: 62 },
+    innate_skill: {
+      season: "S1",
+      name: "麻沸散",
+      description:
+        "回合结束时,使我军兵力最低单体受到伤害降低14%(受智力影响)对其施加清醒,持续1回合。并恢复其兵力(治疗率200%)",
+      trigger: "被动",
+      probability: 1.0,
     },
-    "bonds": [
-      {
-        "name": "江表虎臣",
-        "description": "部队中缘分武将统率提升10点，受到伤害降低3%",
-        "generals": ["黄盖", "甘宁", "徐盛", "程普", "周泰", "凌统", "蒋钦", "丁奉", "董袭", "韩当", "陈武", "潘璋"]
-      },
-      {
-        "name": "弯弓饮羽",
-        "description": "部队中缘分武将普通攻击伤害提升8%",
-        "generals": ["太史慈", "甘宁", "凌统"]
-      }
-    ]
   },
   {
-    "season": "s8",
-    "name": "诸葛亮2",
-    "faction": "蜀",
-    "roles": [],
-    "arms": ["盾兵"],
-    "base_stats": { "武力": 53, "智力": 125, "统率": 104, "先攻": 61 },
-    "innate_skill": {
-      "season": "s8",
-      "name": "星罗棋布",
-      "description": "...",
-      "trigger": "主动",
-      "probability": 0.5
+    season: "S1",
+    name: "华雄",
+    faction: "群",
+    roles: [],
+    arms: ["骑兵"],
+    base_stats: { 武力: 105, 智力: 49, 统率: 99, 先攻: 47 },
+    innate_skill: {
+      season: "S1",
+      name: "耀武扬威",
+      description:
+        "技穷自身2回合,对敌军随机单体造成250%兵刃伤害和1次普通攻击(无视缴械状态)",
+      trigger: "主动",
+      probability: 10,
     },
-    "bonds": [
-      {
-        "name": "薪火相传",
-        "description": "部队中缘分武将智力和统率提升6%",
-        "generals": ["诸葛亮", "姜维", "诸葛亮2"]
-      }
-    ]
   },
   {
-    "season": "s8",
-    "name": "张春华",
-    "faction": "魏",
-    "roles": [],
-    "arms": ["盾兵"],
-    "base_stats": { "武力": 43, "智力": 96, "统率": 93, "先攻": 69 },
-    "innate_skill": {
-      "season": "s8",
-      "name": "荼蘼心计",
-      "description": "...",
-      "trigger": "主动",
-      "probability": 0.5
+    season: "S1",
+    name: "吕布",
+    faction: "群",
+    roles: [],
+    arms: ["骑兵"],
+    base_stats: { 武力: 125, 智力: 38, 统率: 93, 先攻: 76 },
+    innate_skill: {
+      season: "S1",
+      name: "骁勇无前",
+      description:
+        "与敌军全体相互进行1次普攻(互相普攻过程中自身免疫缴械状态)。若自身武力值高于目标，则额外造成100%兵刃伤害",
+      trigger: "主动",
+      probability: 1.0,
     },
-    "bonds": [
-      {
-        "name": "懿德芳姿",
-        "description": "部队中缘分武将受到伤害时，有35%概率令伤害来源降低5点",
-        "generals": ["王异", "步练师", "大乔", "甄洛", "张春华"]
-      },
-      {
-        "name": "枭鸾同谋",
-        "description": "部队中缘分武将造成谋略伤害时有35%概率获得1种布阵状态(优先获得不同状态)，每个回合可触发1次",
-        "generals": ["张春华", "司马懿"]
-      }
-    ]
   },
   {
-    "season": "s8",
-    "name": "张昭",
-    "faction": "吴",
-    "roles": [],
-    "arms": ["弓兵"],
-    "base_stats": { "武力": 16, "智力": 103, "统率": 83, "先攻": 87 },
-    "innate_skill": {
-      "season": "s8",
-      "name": "直谏固政",
-      "description": "...",
-      "trigger": "主动",
-      "probability": 0.5
+    season: "S1",
+    name: "吕蒙",
+    faction: "吴",
+    roles: [],
+    arms: ["枪兵"],
+    base_stats: { 武力: 93.0, 智力: 106.0, 统率: 103.0, 先攻: 77.0 },
+    innate_skill: {
+      season: "S1",
+      name: "白衣渡江",
+      description:
+        "对敌军随机两人造成160%谋略伤害,并施加断粮,持续2回合,若目标已处于断粮状态则额外对目标造成80%谋略伤害",
+      trigger: "主动",
+      probability: 1.0,
     },
-    "bonds": [
-      {
-        "name": "柱石之臣",
-        "description": "部队中缘分武将对持有异常状态的目标造成的伤害提升8%",
-        "generals": ["张昭", "陆逊", "周瑜", "陆抗", "诸葛瑾"]
-      }
-    ]
   },
   {
-    "season": "s7",
-    "name": "皇甫嵩2",
-    "faction": "群",
-    "roles": [],
-    "arms": ["盾兵"],
-    "base_stats": { "武力": 89, "智力": 85, "统率": 111, "先攻": 65 },
-    "innate_skill": {
-      "season": "s7",
-      "name": "兵动若神",
-      "description": "...",
-      "trigger": "主动",
-      "probability": 0.5
+    season: "S1",
+    name: "周仓",
+    faction: "蜀",
+    roles: [],
+    arms: ["骑兵"],
+    base_stats: { 武力: 81, 智力: 73, 统率: 89, 先攻: 25 },
+    innate_skill: {
+      season: "S1",
+      name: "忠烈勇武",
+      description:
+        "每个回合行动时恢复自身兵力(治疗率200%,额外受统率影响)，有40%概率对敌军随机两人施加嘲讽和畏惧状态，持续2回合",
+      trigger: "主动",
+      probability: 1.0,
     },
-    "bonds": [
-      {
-        "name": "汉末栋梁",
-        "description": "部队中缘分武将受到伤害降低5%",
-        "generals": ["皇甫嵩2", "朱儁", "皇甫嵩"]
-      }
-    ]
   },
   {
-    "season": "s7",
-    "name": "朱儁",
-    "faction": "群",
-    "roles": [],
-    "arms": ["弓兵"],
-    "base_stats": { "武力": 82, "智力": 99, "统率": 106, "先攻": 88 },
-    "innate_skill": {
-      "season": "s7",
-      "name": "围师必阙",
-      "description": "...",
-      "trigger": "主动",
-      "probability": 0.5
+    season: "S1",
+    name: "周瑜",
+    faction: "吴",
+    roles: [],
+    arms: ["弓兵"],
+    base_stats: { 武力: 89, 智力: 87, 统率: 107, 先攻: 34 },
+    innate_skill: {
+      season: "S1",
+      name: "临机制胜",
+      description:
+        "战斗中,敌我全体被施加异常状态时,有70%概率触发制胜:立刻对敌军随机两人造成60%谋略伤害。每回合制胜最多触发4次。累积触发4次制胜后，恢复我军全体兵力(治疗率40%)",
+      trigger: "被动",
+      probability: 1.0,
     },
-    "bonds": [
-      {
-        "name": "汉末栋梁",
-        "description": "部队中缘分武将受到伤害降低5%",
-        "generals": ["皇甫嵩2", "朱儁", "皇甫嵩"]
-      }
-    ]
   },
   {
-    "season": "s7",
-    "name": "张宁",
-    "faction": "群",
-    "roles": [],
-    "arms": ["弓兵"],
-    "base_stats": { "武力": 56, "智力": 107, "统率": 102, "先攻": 77 },
-    "innate_skill": {
-      "season": "s7",
-      "name": "太平余响",
-      "description": "...",
-      "trigger": "主动",
-      "probability": 0.5
+    season: "S1",
+    name: "夏侯渊",
+    faction: "魏",
+    roles: [],
+    arms: ["骑兵"],
+    base_stats: { 武力: 104, 智力: 81, 统率: 101, 先攻: 67 },
+    innate_skill: {
+      season: "S1",
+      name: "神速奔袭",
+      description:
+        "每个回合行动时自身武力值提升,提升值为先攻值的40%,持续1回。若自身在先攻判定时处于首位,则获得1回合神速效果:造成伤害和会心几率提升12.25%",
+      trigger: "主动",
+      probability: 1.0,
     },
-    "bonds": [
-      {
-        "name": "黄巾起义",
-        "description": "战斗前2回合 ，部队中缘分武将主动战法发动率提升8%",
-        "generals": ["张角", "张宝", "张梁", "张曼成", "张宁"]
-      },
-      {
-        "name": "承继太平",
-        "description": "部队中缘分武将受到兵刃伤害降低6%",
-        "generals": ["张角", "张宁"]
-      },
-      {
-        "name": "仙人抚顶",
-        "description": "部队中缘分武将受到谋略伤害降低6%",
-        "generals": ["左慈", "张宁"]
-      }
-    ]
   },
   {
-    "season": "s6",
-    "name": "王异",
-    "faction": "魏",
-    "roles": [],
-    "arms": ["枪兵"],
-    "base_stats": { "武力": 17, "智力": 110, "统率": 94, "先攻": 86 },
-    "innate_skill": {
-      "season": "s6",
-      "name": "巧策引锋",
-      "description": "...",
-      "trigger": "主动",
-      "probability": 0.5
+    season: "S1",
+    name: "大乔",
+    faction: "吴",
+    roles: [],
+    arms: ["枪兵"],
+    base_stats: { 武力: 24.0, 智力: 95.0, 统率: 106.0, 先攻: 35.0 },
+    innate_skill: {
+      season: "S1",
+      name: "国色",
+      description:
+        "每个回合开始时,敌军随机两人受到伤害提升20%,恢复我军随机两人兵力(治疗率180%)",
+      trigger: "指挥",
+      probability: 1.0,
     },
-    "bonds": [
-      {
-        "name": "乱世红颜",
-        "description": "战斗开始时，部队中缘分武将获得2层抵御",
-        "generals": ["貂蝉", "蔡文姬", "邹氏", "甄洛", "王异"]
-      },
-      {
-        "name": "懿德芳姿",
-        "description": "部队中缘分武将受到伤害时，有35%概率令伤害来源降低5点",
-        "generals": ["王异", "步练师", "大乔", "甄洛", "张春华"]
-      }
-    ]
   },
   {
-    "season": "s6",
-    "name": "袁术",
-    "faction": "群",
-    "roles": [],
-    "arms": ["盾兵"],
-    "base_stats": { "武力": 76, "智力": 89, "统率": 104, "先攻": 80 },
-    "innate_skill": {
-      "season": "s6",
-      "name": "僭号天子",
-      "description": "...",
-      "trigger": "主动",
-      "probability": 0.5
+    season: "S1",
+    name: "太史慈",
+    faction: "吴",
+    roles: [],
+    arms: ["弓兵"],
+    base_stats: { 武力: 110.0, 智力: 94.0, 统率: 108.0, 先攻: 80.0 },
+    innate_skill: {
+      season: "S1",
+      name: "弦无虚发",
+      description:
+        "每个回合开始时,有90%概率获得1层蓄力:成功普通攻击后可消耗所有蓄力层数进行额外的普通攻击(无视缴械状态,普通攻击次数等于蓄力层数)。自身普通攻击前,若处于缴械或无法普通攻击状态,则有90%概率获得1层蓄力",
+      trigger: "指挥",
+      probability: 1.0,
     },
-    "bonds": [
-      {
-        "name": "四世三公",
-        "description": "部队中缘分武将受到谋略伤害降低3%，受到兵刃伤害降低3%",
-        "generals": ["袁绍", "袁术"]
-      }
-    ]
   },
   {
-    "season": "s6",
-    "name": "马腾",
-    "faction": "群",
-    "roles": [],
-    "arms": ["骑兵"],
-    "base_stats": { "武力": 84, "智力": 59, "统率": 101, "先攻": 91 },
-    "innate_skill": {
-      "season": "s6",
-      "name": "雄踞西凉",
-      "description": "...",
-      "trigger": "主动",
-      "probability": 0.5
+    season: "S1",
+    name: "孙坚",
+    faction: "吴",
+    roles: [],
+    arms: ["盾兵"],
+    base_stats: { 武力: 89, 智力: 87, 统率: 107, 先攻: 34 },
+    innate_skill: {
+      season: "S1",
+      name: "武烈破虏",
+      description:
+        "降低敌军随机单体40点统率(受武力或统率最高值影响),持续2回合并造成250%兵刃伤害,若目标统率低于自身则额外施加震慑,持续1回合，高于自身则使降低统率效果提升50%",
+      trigger: "主动",
+      probability: 1.0,
     },
-    "bonds": [
-      {
-        "name": "西凉铁骑",
-        "description": "部队中缘分武将追击战法伤害提升8%",
-        "generals": ["马超", "马云禄", "马腾"]
-      },
-      {
-        "name": "西州雄骏",
-        "description": "部队中缘分武将兵刃伤害提升5%",
-        "generals": ["马腾", "马超"]
-      }
-    ]
   },
   {
-    "season": "s5",
-    "name": "姜维",
-    "faction": "蜀",
-    "roles": [],
-    "arms": ["枪兵"],
-    "base_stats": { "武力": 101, "智力": 111, "统率": 91, "先攻": 76 },
-    "innate_skill": {
-      "season": "s5",
-      "name": "九伐中原",
-      "description": "...",
-      "trigger": "主动",
-      "probability": 0.5
+    season: "S1",
+    name: "孙尚香",
+    faction: "吴",
+    roles: [],
+    arms: ["弓兵"],
+    base_stats: { 武力: 89, 智力: 87, 统率: 107, 先攻: 34 },
+    innate_skill: {
+      season: "S1",
+      name: "腰弓姬",
+      description:
+        "普通攻击后,对敌军随机单体造成320%兵刃伤害,每有1名异性敌人，该次伤害系数提升30%，75%概率优先选择后排目标",
+      trigger: "追击",
+      probability: 1.0,
     },
-    "bonds": [
-      {
-        "name": "薪火相传",
-        "description": "部队中缘分武将智力和统率提升6%",
-        "generals": ["诸葛亮", "姜维", "诸葛亮2"]
-      }
-    ]
   },
   {
-    "season": "s5",
-    "name": "步练师",
-    "faction": "吴",
-    "roles": [],
-    "arms": ["盾兵"],
-    "base_stats": { "武力": 33, "智力": 105, "统率": 97, "先攻": 81 },
-    "innate_skill": {
-      "season": "s5",
-      "name": "淑懿之德",
-      "description": "...",
-      "trigger": "主动",
-      "probability": 0.5
+    season: "S1",
+    name: "孙权",
+    faction: "吴",
+    roles: [],
+    arms: ["枪兵"],
+    base_stats: { 武力: 90, 智力: 96, 统率: 101, 先攻: 74 },
+    innate_skill: {
+      season: "S1",
+      name: "虎踞江东",
+      description:
+        "自身每学习一个主动战法,我军全体提升3.7%主动战法发动率 自身每学习一个非主动战法，我军全体提升28%连击率 (对自身的提升效果受最高属性影响)",
+      trigger: "主动",
+      probability: 1.0,
     },
-    "bonds": [
-      {
-        "name": "共承天地",
-        "description": "部队中缘分武将前3回合受到伤害降低12%",
-        "generals": ["孙权", "步练师"]
-      }
-    ]
   },
   {
-    "season": "s5",
-    "name": "荀攸",
-    "faction": "魏",
-    "roles": [],
-    "arms": ["弓兵"],
-    "base_stats": { "武力": 38, "智力": 112, "统率": 99, "先攻": 83 },
-    "innate_skill": {
-      "season": "s5",
-      "name": "十二奇策",
-      "description": "...",
-      "trigger": "主动",
-      "probability": 0.5
+    season: "S1",
+    name: "孙策",
+    faction: "吴",
+    roles: [],
+    arms: ["骑兵"],
+    base_stats: { 武力: 112.0, 智力: 77.0, 统率: 110.0, 先攻: 74.0 },
+    innate_skill: {
+      season: "S1",
+      name: "制霸江东",
+      description:
+        "对敌军随机两人造成200%兵刃伤害(自身为后排时，兵刃系数提升50%),并恢复自身兵力(治疗率100%,额外受武力影响,自身为前排时，治疗系数提升30%)",
+      trigger: "主动",
+      probability: 1.0,
     },
-    "bonds": [
-      {
-        "name": "曹魏谋臣",
-        "description": "部队中缘分武将智力提升15点",
-        "generals": ["荀攸", "荀彧", "郭嘉", "贾诩"]
-      }
-    ]
   },
   {
-    "season": "s4",
-    "name": "左慈",
-    "faction": "群",
-    "roles": [],
-    "arms": ["弓兵"],
-    "base_stats": { "武力": 32, "智力": 108, "统率": 86, "先攻": 89 },
-    "innate_skill": {
-      "season": "s4",
-      "name": "金丹秘术",
-      "description": "...",
-      "trigger": "主动",
-      "probability": 0.5
+    season: "S1",
+    name: "小乔",
+    faction: "吴",
+    roles: [],
+    arms: ["弓兵"],
+    base_stats: { 武力: 22.0, 智力: 94.0, 统率: 88.0, 先攻: 73.0 },
+    innate_skill: {
+      season: "S1",
+      name: "天香",
+      description:
+        "对敌军随机两人施加虚弱,持续1回合。恢复我军随机两人兵力(治疗率为250%)",
+      trigger: "主动",
+      probability: 1.0,
     },
-    "bonds": [
-      {
-        "name": "仙人抚顶",
-        "description": "部队中缘分武将受到谋略伤害降低6%",
-        "generals": ["左慈", "张宁"]
-      }
-    ]
   },
   {
-    "season": "s4",
-    "name": "关银屏",
-    "faction": "蜀",
-    "roles": [],
-    "arms": ["枪兵"],
-    "base_stats": { "武力": 102, "智力": 79, "统率": 95, "先攻": 84 },
-    "innate_skill": {
-      "season": "s4",
-      "name": "将门虎女",
-      "description": "...",
-      "trigger": "主动",
-      "probability": 0.5
+    season: "S1",
+    name: "庞德",
+    faction: "群",
+    roles: [],
+    arms: ["骑兵"],
+    base_stats: { 武力: 107, 智力: 71, 统率: 101, 先攻: 59 },
+    innate_skill: {
+      season: "S1",
+      name: "陷阵蹈难",
+      description:
+        "战斗第3,5回合,降低敌军全体30点统率和智力(受武力影响),持续2回合，随后造成340%兵刃伤害",
+      trigger: "主动",
+      probability: 1.0,
     },
-    "bonds": [
-      {
-        "name": "将门虎女",
-        "description": "部队中缘分武将兵刃伤害提升5%",
-        "generals": ["关羽", "关银屏"]
-      }
-    ]
   },
   {
-    "season": "s4",
-    "name": "于吉",
-    "faction": "群",
-    "roles": [],
-    "arms": ["弓兵"],
-    "base_stats": { "武力": 25, "智力": 109, "统率": 92, "先攻": 87 },
-    "innate_skill": {
-      "season": "s4",
-      "name": "兴云布雨",
-      "description": "...",
-      "trigger": "主动",
-      "probability": 0.5
+    season: "S1",
+    name: "张梁",
+    faction: "群",
+    roles: [],
+    arms: ["盾兵"],
+    base_stats: { 武力: 35, 智力: 101, 统率: 92, 先攻: 59 },
+    innate_skill: {
+      season: "S1",
+      name: "妖武",
+      description:
+        "自身倒戈和规避率提升12.25%,持续2回合,然后对敌军随机两人造成220%兵刃伤害,并施加妖术，持续2回合",
+      trigger: "主动",
+      probability: 1.0,
     },
-    "bonds": [
-      {
-        "name": "仙人抚顶",
-        "description": "部队中缘分武将受到谋略伤害降低6%",
-        "generals": ["左慈", "于吉"]
-      }
-    ]
   },
   {
-    "season": "s4",
-    "name": "曹纯",
-    "faction": "魏",
-    "roles": [],
-    "arms": ["骑兵"],
-    "base_stats": { "武力": 96, "智力": 74, "统率": 102, "先攻": 79 },
-    "innate_skill": {
-      "season": "s4",
-      "name": "虎豹督军",
-      "description": "...",
-      "trigger": "主动",
-      "probability": 0.5
+    season: "S1",
+    name: "张角",
+    faction: "群",
+    roles: [],
+    arms: ["盾兵"],
+    base_stats: { 武力: 35, 智力: 113, 统率: 87, 先攻: 62 },
+    innate_skill: {
+      season: "S1",
+      name: "黄天当立",
+      description:
+        "准备1回合,对敌军全体造成300%谋略伤害,目标每多一种负面状态,谋略伤害系数提升30%,可提升3次,并使自身获得黄天:发动准备战法时,有50%概率跳过1回合准备，持续4回合",
+      trigger: "主动",
+      probability: 1.0,
     },
-    "bonds": [
-      {
-        "name": "虎豹骑",
-        "description": "部队中缘分武将突击战法发动率提升8%",
-        "generals": ["曹纯", "曹操"]
-      }
-    ]
   },
   {
-    "season": "S1",
-    "name": "程普",
-    "faction": "吴",
-    "roles": [],
-    "arms": ["枪兵"],
-    "base_stats": { "武力": 89, "智力": 87, "统率": 107, "先攻": 34 },
-    "innate_skill": {
-      "season": "S1",
-      "name": "兴王定霸",
-      "description": "我军全体造成兵刃伤害后有60%概率恢复兵力(治疗率40%,额外受统率影响),造成谋略伤害后有60%概率使受到伤害降低14%,持续2回合，可叠加2次",
-      "trigger": "被动",
-      "probability": 1.0
+    season: "S1",
+    name: "张郃",
+    faction: "魏",
+    roles: [],
+    arms: ["枪兵"],
+    base_stats: { 武力: 104.0, 智力: 81.0, 统率: 101.0, 先攻: 67.0 },
+    innate_skill: {
+      season: "S1",
+      name: "大破街亭",
+      description:
+        "提升自身2.5%破甲,持续到战斗结束，可叠加4次，然后对敌军随机两人造成220%兵刃伤害,并有65%概率施加缴械持续1回合,若目标已持有缴械状态，则该次伤害提升30%",
+      trigger: "主动",
+      probability: 1.0,
+    },
+  },
+  {
+    season: "S1",
+    name: "张飞",
+    faction: "蜀",
+    roles: [],
+    arms: ["枪兵"],
+    base_stats: { 武力: 121.0, 智力: 65.0, 统率: 99.0, 先攻: 81.0 },
+    innate_skill: {
+      season: "S1",
+      name: "万人之敌",
+      description:
+        "对敌军全体造成140%兵力伤害,并对持有畏惧状态的敌人30%概率造成震慑，持续1回合。未持有畏惧的敌人施加畏惧，持续2回合。",
+      trigger: "主动",
+      probability: 1.0,
+    },
+  },
+  {
+    season: "S1",
+    name: "徐晃",
+    faction: "魏",
+    roles: [],
+    arms: ["盾兵"],
+    base_stats: { 武力: 104, 智力: 81, 统率: 101, 先攻: 67 },
+    innate_skill: {
+      season: "S1",
+      name: "长驱直入",
+      description:
+        "对敌军随机单体造成350%兵刃伤害,并施加技穷,持续1回合，,若目标已持有技穷状态或是敌军兵力最低单体，则该次伤害值提升30%",
+      trigger: "主动",
+      probability: 1.0,
+    },
+  },
+  {
+    season: "S1",
+    name: "徐盛",
+    faction: "吴",
+    roles: [],
+    arms: ["枪兵"],
+    base_stats: { 武力: 89.0, 智力: 87.0, 统率: 107.0, 先攻: 34.0 },
+    innate_skill: {
+      season: "S1",
+      name: "百里疑城",
+      description:
+        "战斗开始前4回合,我军全体受到伤害前有12.25%概率(受统率影响)获得1层抵御,第4回合开始时,自身统率提升40点,并对敌军全体施加洪水状态，持续2回合",
+      trigger: "指挥",
+      probability: 1.0,
+    },
+  },
+  {
+    season: "S1",
+    name: "文丑",
+    faction: "群",
+    roles: [],
+    arms: ["枪兵"],
+    base_stats: { 武力: 107, 智力: 50, 统率: 92, 先攻: 77 },
+    innate_skill: {
+      season: "S1",
+      name: "交锋震威",
+      description:
+        "普通攻击后,获得必中状态,持续2回合,然后对敌军兵力最低单体造成280%兵刃伤害",
+      trigger: "追击",
+      probability: 1.0,
+    },
+  },
+  {
+    season: "S1",
+    name: "文聘",
+    faction: "魏",
+    roles: [],
+    arms: ["骑兵"],
+    base_stats: { 武力: 81.0, 智力: 73.0, 统率: 89.0, 先攻: 25.0 },
+    innate_skill: {
+      season: "S1",
+      name: "扼守荆江",
+      description: "使自身统率提升40点，并获得清醒，持续2回合",
+      trigger: "主动",
+      probability: 1.0,
+    },
+  },
+  {
+    season: "S1",
+    name: "曹仁",
+    faction: "魏",
+    roles: [],
+    arms: ["盾兵"],
+    base_stats: { 武力: 81.0, 智力: 79.0, 统率: 113.0, 先攻: 44.0 },
+    innate_skill: {
+      season: "S1",
+      name: "固镇襄樊",
+      description:
+        "奇数回合自身受到来自后排的伤害降低30%(受统率影响),来自前排的伤害降低7.15%(受统率影响)。偶数回合开始时有37.75%概率对敌军随机两人施加技穷,持续1回合每个目标的概率独立判定",
+      trigger: "指挥",
+      probability: 1.0,
+    },
+  },
+  {
+    season: "S1",
+    name: "曹操",
+    faction: "魏",
+    roles: [],
+    arms: ["盾兵"],
+    base_stats: { 武力: 88, 智力: 87, 统率: 86, 先攻: 40 },
+    innate_skill: {
+      season: "S1",
+      name: "乱世建雄",
+      description:
+        "战斗开始时,使我军全体受到伤害降低14%(受智力影响),获得6%倒戈和攻心(受智力影响)。我军统率最高单体,每次受到伤害后,有30%概率恢复自身兵力(治疗率40%,额外受统率影响)",
+      trigger: "指挥",
+      probability: 1.0,
+    },
+  },
+  {
+    season: "S1",
+    name: "曹洪",
+    faction: "魏",
+    roles: [],
+    arms: ["骑兵"],
+    base_stats: { 武力: 86.0, 智力: 48.0, 统率: 82.0, 先攻: 54.0 },
+    innate_skill: {
+      season: "S1",
+      name: "八虎雄首",
+      description:
+        "准备1回合,对敌军随机单体造成360%兵刃和谋略伤害,若目标处于洪水状态该次伤害提升30%",
+      trigger: "主动",
+      probability: 1.0,
+    },
+  },
+  {
+    season: "S1",
+    name: "李儒",
+    faction: "群",
+    roles: [],
+    arms: ["骑兵"],
+    base_stats: { 武力: 41, 智力: 114, 统率: 87, 先攻: 59 },
+    innate_skill: {
+      season: "S1",
+      name: "鸩饮毒弑",
+      description:
+        "对敌军随机两人施加1层鸩毒状态,持续2回合,并使两名队友获得2回合鸩弑:对持有鸩毒状态的目标造成兵刃或谋略伤害后,有50%概率增加目标1层鸩毒状态",
+      trigger: "主动",
+      probability: 1.0,
+    },
+  },
+  {
+    season: "S1",
+    name: "甄洛",
+    faction: "魏",
+    roles: [],
+    arms: ["弓兵"],
+    base_stats: { 武力: 22.0, 智力: 103.0, 统率: 103.0, 先攻: 56.0 },
+    innate_skill: {
+      season: "S1",
+      name: "流风回雪",
+      description:
+        "每个回合开始时,恢复自身兵力(治疗率为140%),并使随机一名队友(优先选择后排)获得洛神:恢复自身兵力(治疗率为140%)，造成伤害提升12.25%,获得洛神后的首次非普通攻击伤害必定触发会心和奇谋。回合结束后洛神消失",
+      trigger: "指挥",
+      probability: 1.0,
+    },
+  },
+  {
+    season: "S1",
+    name: "甘宁",
+    faction: "吴",
+    roles: [],
+    arms: ["骑兵"],
+    base_stats: { 武力: 112.0, 智力: 84.0, 统率: 107.0, 先攻: 71.0 },
+    innate_skill: {
+      season: "S1",
+      name: "锦帆渠魁",
+      description:
+        "普通攻击伤害提升140%,普通攻击前提升自身10点武力,持续2回合，可叠加4次",
+      trigger: "主动",
+      probability: 1.0,
+    },
+  },
+  {
+    season: "S1",
+    name: "皇甫嵩",
+    faction: "群",
+    roles: [],
+    arms: ["骑兵"],
+    base_stats: { 武力: 88, 智力: 87, 统率: 86, 先攻: 40 },
+    innate_skill: {
+      season: "S1",
+      name: "平乱定叛",
+      description:
+        "自身统率提升33.3点,自身受到伤害后,有50%概率降低攻击方5.5%造成伤害,持续2回合，可看加4次",
+      trigger: "被动",
+      probability: 1.0,
+    },
+  },
+  {
+    season: "S1",
+    name: "程昱",
+    faction: "魏",
+    roles: [],
+    arms: ["弓兵"],
+    base_stats: { 武力: 35, 智力: 113, 统率: 87, 先攻: 62 },
+    innate_skill: {
+      season: "S1",
+      name: "勇冠贲育",
+      description:
+        "对敌军随机单体造成360%谋略伤害,若目标为前排则额外使目标产生逃兵(受智力影响)",
+      trigger: "主动",
+      probability: 1.0,
+    },
+  },
+  {
+    season: "S1",
+    name: "程普",
+    faction: "吴",
+    roles: [],
+    arms: ["枪兵"],
+    base_stats: { 武力: 89, 智力: 87, 统率: 107, 先攻: 34 },
+    innate_skill: {
+      season: "S1",
+      name: "兴王定霸",
+      description:
+        "我军全体造成兵刃伤害后有60%概率恢复兵力(治疗率40%,额外受统率影响),造成谋略伤害后有60%概率使受到伤害降低14%,持续2回合，可叠加2次",
+      trigger: "被动",
+      probability: 1.0,
     },
   },
   {
