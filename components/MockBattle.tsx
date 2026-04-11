@@ -333,12 +333,12 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
                   <div 
                     key={`round-${roundIndex}-${i}`} 
                     onClick={() => setSimulationItem(slot!)}
-                    className={`aspect-square rounded-lg flex items-center justify-center text-sm font-bold border border-primary/30 bg-primary/5 text-center p-1 relative group cursor-pointer transition-all ${
-                      simulationItem?.data.name === slot!.data.name ? 'ring-2 ring-primary ring-offset-2' : ''
+                    className={`aspect-square rounded-lg flex items-center justify-center text-sm font-bold border border-primary/30 bg-surface-container-highest text-center p-1 relative group cursor-pointer transition-all ${
+                      simulationItem?.data.name === slot!.data.name ? 'border-primary ring-1 ring-primary' : ''
                     }`}
                   >
                     {slot!.data.name}
-                    <div className="absolute -top-1 -left-1 bg-primary text-on-primary text-[8px] px-1 rounded-full">
+                    <div className="absolute top-0.5 left-0.5 bg-primary text-white text-[8px] px-1 rounded">
                       R{roundIndex + 1}
                     </div>
                   </div>
@@ -350,7 +350,7 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
                 key={`manual-${i}`} 
                 onClick={() => setSimulationItem({ type: 'general', data: g })}
                 className={`aspect-square rounded-lg flex items-center justify-center text-sm font-bold border border-outline-variant/30 text-center p-1 relative group cursor-pointer transition-all ${
-                  simulationItem?.data.name === g.name ? 'bg-primary text-on-primary ring-2 ring-primary ring-offset-2' : 'bg-surface-container-highest'
+                  simulationItem?.data.name === g.name ? 'border-primary ring-1 ring-primary' : 'bg-surface-container-highest'
                 }`}
               >
                 {g.name}
@@ -360,9 +360,9 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
                     setManuallyAddedGenerals(prev => prev.filter((_, idx) => idx !== i));
                     if (simulationItem?.data.name === g.name) setSimulationItem(null);
                   }}
-                  className="absolute -top-2 -right-2 bg-error text-on-error rounded-full p-0.5 hidden group-hover:block z-10"
+                  className="absolute top-0.5 right-0.5 bg-error/90 text-white rounded-full p-1 shadow-sm hover:bg-error transition-all hidden group-hover:block z-10"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-3 h-3 stroke-[3] text-black" />
                 </button>
               </div>
             ))}
@@ -393,12 +393,12 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
                   <div 
                     key={`round-${roundIndex}-${i}`} 
                     onClick={() => setSimulationItem(slot!)}
-                    className={`aspect-square rounded-lg flex items-center justify-center text-sm font-bold border border-tertiary/30 bg-tertiary/5 text-center p-1 relative group cursor-pointer transition-all ${
-                      simulationItem?.data.name === slot!.data.name ? 'ring-2 ring-tertiary ring-offset-2' : ''
+                    className={`aspect-square rounded-lg flex items-center justify-center text-sm font-bold border border-tertiary/30 bg-surface-container-highest text-center p-1 relative group cursor-pointer transition-all ${
+                      simulationItem?.data.name === slot!.data.name ? 'border-tertiary ring-1 ring-tertiary' : ''
                     }`}
                   >
                     {slot!.data.name}
-                    <div className="absolute -top-1 -left-1 bg-tertiary text-on-tertiary text-[8px] px-1 rounded-full">
+                    <div className="absolute top-0.5 left-0.5 bg-tertiary text-white text-[8px] px-1 rounded">
                       R{roundIndex + 1}
                     </div>
                   </div>
@@ -410,7 +410,7 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
                 key={`manual-${i}`} 
                 onClick={() => setSimulationItem({ type: 'tactic', data: t })}
                 className={`aspect-square rounded-lg flex items-center justify-center text-sm font-bold border border-outline-variant/30 text-center p-1 relative group cursor-pointer transition-all ${
-                  simulationItem?.data.name === t.name ? 'bg-tertiary text-on-tertiary ring-2 ring-tertiary ring-offset-2' : 'bg-surface-container-highest'
+                  simulationItem?.data.name === t.name ? 'border-tertiary ring-1 ring-tertiary' : 'bg-surface-container-highest'
                 }`}
               >
                 {t.name}
@@ -420,9 +420,9 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
                     setManuallyAddedTactics(prev => prev.filter((_, idx) => idx !== i));
                     if (simulationItem?.data.name === t.name) setSimulationItem(null);
                   }}
-                  className="absolute -top-2 -right-2 bg-error text-on-error rounded-full p-0.5 hidden group-hover:block z-10"
+                  className="absolute top-0.5 right-0.5 bg-error/90 text-white rounded-full p-1 shadow-sm hover:bg-error transition-all hidden group-hover:block z-10"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-3 h-3 stroke-[3] text-black" />
                 </button>
               </div>
             ))}
@@ -491,10 +491,10 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
                 onClick={() => setCurrentRound(i)}
                 className={`px-4 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap transition-all border-2 ${
                   currentRound === i
-                    ? 'bg-primary border-primary text-on-primary shadow-sm' 
+                    ? 'bg-primary border-primary text-white shadow-sm' 
                     : selectedGroups[i] !== null
-                      ? 'bg-primary/5 border-primary/20 text-primary'
-                      : 'bg-surface-container-highest border-transparent text-gray-500'
+                      ? 'bg-green-600 border-green-600 text-white'
+                      : 'bg-surface-container-highest border-transparent text-black'
                 }`}
               >
                 第 {i + 1} 轮
@@ -516,7 +516,7 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
                     isSelected 
                       ? 'border-primary bg-primary/5' 
                       : 'border-outline-variant/30 bg-surface-container-lowest hover:border-primary/30'
-                  }`}
+                  } ${groupIndex === 5 ? 'bg-[#ffead0] border-[3px] border-[#ffbc00]' : ''}`}
                 >
                   <div className="w-12 h-12 rounded-full bg-surface-container-highest flex items-center justify-center font-bold text-lg text-gray-700 shrink-0">
                     {groupIndex + 1}
@@ -557,13 +557,13 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
                                   </span>
                                   <span className="font-bold text-sm text-gray-900 line-clamp-2">{slot.data.name}</span>
                                 </div>
-                                <div className="absolute -top-2 -right-2 flex gap-1 hidden group-hover:flex z-10">
+                                <div className="absolute top-1 right-1 flex gap-1 hidden group-hover:flex z-10">
                                   <div 
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleOpenModal('slot', currentRound, groupIndex, slotIndex);
                                     }}
-                                    className="bg-primary text-on-primary rounded-full p-1 shadow-sm hover:brightness-110"
+                                    className="bg-surface-container-highest text-black rounded-full p-1 shadow-sm hover:bg-surface-container-highest/80 transition-all"
                                     title="切换"
                                   >
                                     <RefreshCw className="w-3 h-3" />
@@ -576,10 +576,10 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
                                       setRoundsData(newRounds);
                                       saveToLocalStorage(newRounds, selectedGroups);
                                     }}
-                                    className="bg-error text-on-error rounded-full p-1 shadow-sm hover:brightness-110"
+                                    className="bg-surface-container-highest text-black rounded-full p-1 shadow-sm hover:bg-surface-container-highest/80 transition-all"
                                     title="移除"
                                   >
-                                    <X className="w-3 h-3" />
+                                    <X className="w-3 h-3 stroke-[3]" />
                                   </div>
                                 </div>
                               </>
@@ -599,8 +599,8 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
                     onClick={() => handleSelectGroup(currentRound, groupIndex)}
                     className={`px-6 py-3 rounded-xl font-bold transition-all shrink-0 ${
                       isSelected
-                        ? 'bg-primary text-on-primary'
-                        : 'bg-secondary text-on-secondary hover:shadow-md hover:brightness-110'
+                        ? 'bg-primary text-white'
+                        : 'bg-secondary text-white hover:shadow-md hover:brightness-110'
                     }`}
                   >
                     {isSelected ? '已选择' : '选择此组'}
@@ -804,17 +804,21 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
                     const isAlreadyInWarehouse = manuallyAddedGenerals.some(mg => mg.name === g.name);
                     const isAlreadyInSlots = roundsData.some(round => round.some(group => group.some(slot => slot?.data.name === g.name)));
                     const isSelected = tempSelectedItems.some(item => (item.data ? item.data.name : item.name) === g.name);
+                    const isDisabled = isAlreadyInWarehouse || isAlreadyInSlots;
                     return (
                       <button
                         key={i}
                         onClick={() => handleSelectItem(g, 'general')}
+                        disabled={isDisabled}
                         className={`aspect-square rounded-lg flex flex-col items-center justify-center p-2 transition-colors border relative ${
                           isSelected 
                             ? 'bg-primary/10 border-primary text-primary' 
-                            : 'bg-surface-container-highest border-outline-variant/20 hover:bg-primary/5 hover:border-primary/50 text-on-surface'
+                            : isDisabled
+                              ? 'bg-surface-container-highest border-outline-variant/10 text-outline opacity-50 cursor-not-allowed'
+                              : 'bg-surface-container-highest border-outline-variant/20 hover:bg-primary/5 hover:border-primary/50 text-on-surface'
                         }`}
                       >
-                        {modalTarget?.dest === 'slot' && isAlreadyInSlots ? (
+                        {isAlreadyInSlots ? (
                           <span className="absolute top-1 right-1 text-[8px] bg-secondary text-white px-1 rounded font-bold">
                             已录入
                           </span>
@@ -833,17 +837,21 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
                     const isAlreadyInWarehouse = manuallyAddedTactics.some(mt => mt.name === t.name);
                     const isAlreadyInSlots = roundsData.some(round => round.some(group => group.some(slot => slot?.data.name === t.name)));
                     const isSelected = tempSelectedItems.some(item => (item.data ? item.data.name : item.name) === t.name);
+                    const isDisabled = isAlreadyInWarehouse || isAlreadyInSlots;
                     return (
                       <button
                         key={i}
                         onClick={() => handleSelectItem(t, 'tactic')}
+                        disabled={isDisabled}
                         className={`aspect-square rounded-lg flex flex-col items-center justify-center p-2 transition-colors border relative ${
                           isSelected 
                             ? 'bg-primary/10 border-primary text-primary' 
-                            : 'bg-surface-container-highest border-outline-variant/20 hover:bg-primary/5 hover:border-primary/50 text-on-surface'
+                            : isDisabled
+                              ? 'bg-surface-container-highest border-outline-variant/10 text-outline opacity-50 cursor-not-allowed'
+                              : 'bg-surface-container-highest border-outline-variant/20 hover:bg-primary/5 hover:border-primary/50 text-on-surface'
                         }`}
                       >
-                        {modalTarget?.dest === 'slot' && isAlreadyInSlots ? (
+                        {isAlreadyInSlots ? (
                           <span className="absolute top-1 right-1 text-[8px] bg-secondary text-white px-1 rounded font-bold">
                             已录入
                           </span>
