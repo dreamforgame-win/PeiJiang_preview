@@ -39,16 +39,28 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
   const [roundsData, setRoundsData] = useState<(SlotItem | null)[][][]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('mockBattleRoundsData');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.length === 6) {
+          parsed.push(Array(3).fill(null).map(() => Array(3).fill(null)));
+        }
+        return parsed;
+      }
     }
-    return Array(6).fill(null).map(() => Array(3).fill(null).map(() => Array(3).fill(null)));
+    return Array(7).fill(null).map(() => Array(3).fill(null).map(() => Array(3).fill(null)));
   });
   const [selectedGroups, setSelectedGroups] = useState<(number | null)[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('mockBattleSelectedGroups');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.length === 6) {
+          parsed.push(null);
+        }
+        return parsed;
+      }
     }
-    return Array(6).fill(null);
+    return Array(7).fill(null);
   });
 
   // Data Migration: Rename 甄姬 to 甄洛
@@ -107,9 +119,9 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
   const handleReset = () => {
     setManuallyAddedGenerals([]);
     setManuallyAddedTactics([]);
-    const initialRoundsData = Array(6).fill(null).map(() => Array(3).fill(null).map(() => Array(3).fill(null)));
+    const initialRoundsData = Array(7).fill(null).map(() => Array(3).fill(null).map(() => Array(3).fill(null)));
     setRoundsData(initialRoundsData);
-    const initialSelectedGroups = Array(6).fill(null);
+    const initialSelectedGroups = Array(7).fill(null);
     setSelectedGroups(initialSelectedGroups);
     setSimulationItem(null);
     setCurrentRound(0);
@@ -215,6 +227,7 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
 
   const [modalTab, setModalTab] = useState<'general' | 'tactic'>('general');
   const [searchQuery, setSearchQuery] = useState('');
+  const [tempSelectedItems, setTempSelectedItems] = useState<any[]>([]);
 
   const handleOpenModal = (dest: 'warehouse_general' | 'warehouse_tactic' | 'slot', roundIndex?: number, groupIndex?: number, slotIndex?: number) => {
     setModalTarget({ dest, roundIndex, groupIndex, slotIndex });
@@ -222,18 +235,47 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
     if (dest === 'warehouse_tactic') setModalTab('tactic');
     setIsModalOpen(true);
     setSearchQuery('');
+    setTempSelectedItems([]);
   };
 
   const handleSelectItem = (item: any, type: 'general' | 'tactic') => {
     if (!modalTarget) return;
 
-    if (modalTarget.dest === 'warehouse_general') {
-      setManuallyAddedGenerals(prev => [...prev, item]);
-    } else if (modalTarget.dest === 'warehouse_tactic') {
-      setManuallyAddedTactics(prev => [...prev, item]);
+    if (modalTarget.dest === 'warehouse_general' || modalTarget.dest === 'warehouse_tactic') {
+      if (tempSelectedItems.some(i => i.name === item.name)) {
+        setTempSelectedItems(prev => prev.filter(i => i.name !== item.name));
+      } else {
+        setTempSelectedItems(prev => [...prev, item]);
+      }
     } else if (modalTarget.dest === 'slot') {
+      if (tempSelectedItems.some(i => i.data.name === item.name)) {
+        setTempSelectedItems(prev => prev.filter(i => i.data.name !== item.name));
+      } else {
+        if (tempSelectedItems.length < 3) {
+          setTempSelectedItems(prev => [...prev, { data: item, type }]);
+        }
+      }
+    }
+  };
+
+  const handleConfirmModal = () => {
+    if (modalTarget?.dest === 'warehouse_general') {
+      const newGenerals = tempSelectedItems.filter(item => !manuallyAddedGenerals.some(g => g.name === item.name));
+      setManuallyAddedGenerals(prev => [...prev, ...newGenerals]);
+    } else if (modalTarget?.dest === 'warehouse_tactic') {
+      const newTactics = tempSelectedItems.filter(item => !manuallyAddedTactics.some(t => t.name === item.name));
+      setManuallyAddedTactics(prev => [...prev, ...newTactics]);
+    } else if (modalTarget?.dest === 'slot') {
       const newRounds = [...roundsData];
-      newRounds[modalTarget.roundIndex!][modalTarget.groupIndex!][modalTarget.slotIndex!] = { type, data: item };
+      const { roundIndex, groupIndex, slotIndex } = modalTarget;
+      
+      let currentSlot = slotIndex!;
+      for (const selected of tempSelectedItems) {
+        if (currentSlot < 3) {
+          newRounds[roundIndex!][groupIndex!][currentSlot] = selected;
+          currentSlot++;
+        }
+      }
       setRoundsData(newRounds);
       saveToLocalStorage(newRounds, selectedGroups);
     }
@@ -246,13 +288,22 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
     setSelectedGroups(newSelected);
     saveToLocalStorage(roundsData, newSelected);
 
-    if (roundIndex < 5) {
+    if (roundIndex < 6) {
       setCurrentRound(roundIndex + 1);
     }
   };
 
-  const filteredGenerals = allGenerals.filter(g => g.name.includes(searchQuery));
-  const filteredTactics = allTactics.filter(t => t.name.includes(searchQuery));
+  const filteredGenerals = allGenerals.filter(g => {
+    if (!searchQuery) return true;
+    const queries = searchQuery.split(/[\s,，]+/).filter(Boolean);
+    return queries.some(q => g.name.toLowerCase().includes(q.toLowerCase()));
+  });
+
+  const filteredTactics = allTactics.filter(t => {
+    if (!searchQuery) return true;
+    const queries = searchQuery.split(/[\s,，]+/).filter(Boolean);
+    return queries.some(q => t.name.toLowerCase().includes(q.toLowerCase()));
+  });
 
   return (
     <div className="flex h-full gap-6 p-2">
@@ -434,7 +485,7 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
         {/* Round Selection Tabs (only visible in rounds mode) */}
         {viewMode === 'rounds' && (
           <div className="flex gap-1 overflow-x-auto pb-4 scrollbar-hide">
-            {Array(6).fill(0).map((_, i) => (
+            {Array(7).fill(0).map((_, i) => (
               <button
                 key={i}
                 onClick={() => setCurrentRound(i)}
@@ -506,15 +557,30 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
                                   </span>
                                   <span className="font-bold text-sm text-gray-900 line-clamp-2">{slot.data.name}</span>
                                 </div>
-                                <div 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleOpenModal('slot', currentRound, groupIndex, slotIndex);
-                                  }}
-                                  className="absolute -top-2 -right-2 bg-primary text-on-primary rounded-full p-1 hidden group-hover:block z-10 shadow-sm"
-                                  title="切换"
-                                >
-                                  <RefreshCw className="w-3 h-3" />
+                                <div className="absolute -top-2 -right-2 flex gap-1 hidden group-hover:flex z-10">
+                                  <div 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenModal('slot', currentRound, groupIndex, slotIndex);
+                                    }}
+                                    className="bg-primary text-on-primary rounded-full p-1 shadow-sm hover:brightness-110"
+                                    title="切换"
+                                  >
+                                    <RefreshCw className="w-3 h-3" />
+                                  </div>
+                                  <div 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const newRounds = [...roundsData];
+                                      newRounds[currentRound][groupIndex][slotIndex] = null;
+                                      setRoundsData(newRounds);
+                                      saveToLocalStorage(newRounds, selectedGroups);
+                                    }}
+                                    className="bg-error text-on-error rounded-full p-1 shadow-sm hover:brightness-110"
+                                    title="移除"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </div>
                                 </div>
                               </>
                             ) : (
@@ -720,7 +786,7 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-outline" />
                 <input
                   type="text"
-                  placeholder={`搜索${modalTab === 'general' ? '武将' : '战法'}...`}
+                  placeholder={`搜索${modalTab === 'general' ? '武将' : '战法'}，支持多个同时搜索…`}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-9 pr-4 py-2 bg-surface-container-highest rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -734,30 +800,81 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
             <div className="flex-1 overflow-y-auto p-4">
               <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
                 {modalTab === 'general' ? (
-                  filteredGenerals.map((g, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleSelectItem(g, 'general')}
-                      className="aspect-square bg-surface-container-highest rounded-lg flex flex-col items-center justify-center p-2 hover:bg-primary/10 hover:text-primary transition-colors border border-outline-variant/20"
-                    >
-                      <span className="font-bold text-sm">{g.name}</span>
-                      <span className="text-xs opacity-60 mt-1">{g.season}</span>
-                    </button>
-                  ))
+                  filteredGenerals.map((g, i) => {
+                    const isAlreadyInWarehouse = manuallyAddedGenerals.some(mg => mg.name === g.name);
+                    const isAlreadyInSlots = roundsData.some(round => round.some(group => group.some(slot => slot?.data.name === g.name)));
+                    const isSelected = tempSelectedItems.some(item => (item.data ? item.data.name : item.name) === g.name);
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => handleSelectItem(g, 'general')}
+                        className={`aspect-square rounded-lg flex flex-col items-center justify-center p-2 transition-colors border relative ${
+                          isSelected 
+                            ? 'bg-primary/10 border-primary text-primary' 
+                            : 'bg-surface-container-highest border-outline-variant/20 hover:bg-primary/5 hover:border-primary/50 text-on-surface'
+                        }`}
+                      >
+                        {modalTarget?.dest === 'slot' && isAlreadyInSlots ? (
+                          <span className="absolute top-1 right-1 text-[8px] bg-secondary text-white px-1 rounded font-bold">
+                            已录入
+                          </span>
+                        ) : isAlreadyInWarehouse ? (
+                          <span className="absolute top-1 right-1 text-[8px] bg-green-500 text-white px-1 rounded font-bold">
+                            已入库
+                          </span>
+                        ) : null}
+                        <span className="font-bold text-sm">{g.name}</span>
+                        <span className="text-xs opacity-60 mt-1">{g.season}</span>
+                      </button>
+                    );
+                  })
                 ) : (
-                  filteredTactics.map((t, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleSelectItem(t, 'tactic')}
-                      className="aspect-square bg-surface-container-highest rounded-lg flex flex-col items-center justify-center p-2 hover:bg-primary/10 hover:text-primary transition-colors border border-outline-variant/20"
-                    >
-                      <span className="font-bold text-sm">{t.name}</span>
-                      <span className="text-xs opacity-60 mt-1">{t.type}</span>
-                    </button>
-                  ))
+                  filteredTactics.map((t, i) => {
+                    const isAlreadyInWarehouse = manuallyAddedTactics.some(mt => mt.name === t.name);
+                    const isAlreadyInSlots = roundsData.some(round => round.some(group => group.some(slot => slot?.data.name === t.name)));
+                    const isSelected = tempSelectedItems.some(item => (item.data ? item.data.name : item.name) === t.name);
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => handleSelectItem(t, 'tactic')}
+                        className={`aspect-square rounded-lg flex flex-col items-center justify-center p-2 transition-colors border relative ${
+                          isSelected 
+                            ? 'bg-primary/10 border-primary text-primary' 
+                            : 'bg-surface-container-highest border-outline-variant/20 hover:bg-primary/5 hover:border-primary/50 text-on-surface'
+                        }`}
+                      >
+                        {modalTarget?.dest === 'slot' && isAlreadyInSlots ? (
+                          <span className="absolute top-1 right-1 text-[8px] bg-secondary text-white px-1 rounded font-bold">
+                            已录入
+                          </span>
+                        ) : isAlreadyInWarehouse ? (
+                          <span className="absolute top-1 right-1 text-[8px] bg-green-500 text-white px-1 rounded font-bold">
+                            已入库
+                          </span>
+                        ) : null}
+                        <span className="font-bold text-sm">{t.name}</span>
+                        <span className="text-xs opacity-60 mt-1">{t.type}</span>
+                      </button>
+                    );
+                  })
                 )}
               </div>
             </div>
+            
+            {(modalTarget?.dest === 'warehouse_general' || modalTarget?.dest === 'warehouse_tactic' || modalTarget?.dest === 'slot') && (
+              <div className="p-4 border-t border-outline-variant/20 bg-surface-container-low flex flex-col gap-2">
+                <div className="text-xs text-center text-on-surface-variant font-bold">
+                  已选择 {tempSelectedItems.length} 个{modalTarget?.dest === 'slot' ? '项目' : (modalTab === 'general' ? '武将' : '战法')}
+                </div>
+                <button
+                  onClick={handleConfirmModal}
+                  disabled={tempSelectedItems.length === 0}
+                  className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {modalTarget?.dest === 'slot' ? '确认选择' : '加入仓库'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

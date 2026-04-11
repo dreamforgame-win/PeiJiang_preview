@@ -24,6 +24,7 @@ import GenericImportModal from '@/components/GenericImportModal';
 import QuickEntryModal from '@/components/QuickEntryModal';
 import ShareCodeModal from '@/components/ShareCodeModal';
 import MockBattle from '@/components/MockBattle';
+import WarehouseQuickImportModal from '@/components/WarehouseQuickImportModal';
 import { generateShareCode } from '@/lib/shareCode';
 
 export default function Page() {
@@ -42,10 +43,11 @@ export default function Page() {
   const [isTacticImportOpen, setIsTacticImportOpen] = useState(false);
   const [isWarehouseExportOpen, setIsWarehouseExportOpen] = useState(false);
   const [isWarehouseImportOpen, setIsWarehouseImportOpen] = useState(false);
+  const [isWarehouseQuickImportOpen, setIsWarehouseQuickImportOpen] = useState(false);
   const [isShareCodeModalOpen, setIsShareCodeModalOpen] = useState(false);
   const [currentShareCode, setCurrentShareCode] = useState('');
 
-  const [selectedGeneral, setSelectedGeneral] = useState<typeof wujiangData[0] | null>(null);
+  const [selectedGeneral, setSelectedGeneral] = useState<(typeof wujiangData[0] & { name: string, faction: string, arms: string[], season: string, force?: string, command?: string, intelligence?: string, speed?: string, fates?: { name: string, description: string, generals: string[] }[], innate_skill?: { name: string, trigger?: string, probability?: number, description?: string } }) | null>(null);
   const [selectedTactic, setSelectedTactic] = useState<typeof zhanfaData[0] | null>(null);
   
   const [isTeamEditorOpen, setIsTeamEditorOpen] = useState(false);
@@ -68,13 +70,52 @@ export default function Page() {
 
   const [favoritedTeams, toggleFavoriteTeam] = usePersistentCollection('favoritedTeams', []);
 
-  const allGenerals = [
-    ...customGenerals.filter(cg => !wujiangData.some(wg => wg.name === cg.name)),
-    ...wujiangData
-  ];
   const allTactics = [
     ...customTactics.filter(ct => !zhanfaData.some(zt => zt.name === ct.name)),
     ...zhanfaData
+  ];
+
+  const allGenerals = [
+    ...customGenerals.filter(cg => !wujiangData.some(wg => wg.武将名 === cg.name)).map(cg => {
+      const tactic = allTactics.find(t => t.name === cg.innate_skill?.name);
+      return {
+        ...cg,
+        innate_skill: tactic ? {
+          name: tactic.name,
+          trigger: tactic.type,
+          probability: tactic.probability,
+          description: tactic.description
+        } : cg.innate_skill
+      };
+    }),
+    ...wujiangData.map(w => {
+      const tactic = allTactics.find(t => t.name === w.自带战法);
+      return { 
+        ...w, 
+        name: w.武将名, 
+        faction: w.阵营, 
+        arms: w.兵种.split(','), 
+        season: w.赛季,
+        force: w.武力,
+        command: w.统帅,
+        intelligence: w.智力,
+        speed: w.先攻,
+        fates: w.缘分详情合集 ? w.缘分详情合集.split('; ').map(f => {
+          const parts = f.split('|');
+          return {
+            name: parts[0],
+            description: parts[1],
+            generals: parts[2] ? parts[2].split('/') : []
+          };
+        }) : [],
+        innate_skill: tactic ? {
+          name: tactic.name,
+          trigger: tactic.type,
+          probability: tactic.probability,
+          description: tactic.description
+        } : { name: w.自带战法 } 
+      };
+    })
   ];
 
   const handleQuickEntry = async (type: 'general' | 'tactic', data: any) => {
@@ -150,12 +191,12 @@ export default function Page() {
   }, [mounted, collectedGenerals, allTeams, customGenerals, setCollectedGenerals, setAllTeams, setCustomGenerals]);
 
   const handleGeneralClick = (name: string) => {
-    const general = wujiangData.find(w => w.name === name);
-    if (general) setSelectedGeneral(general);
+    const general = allGenerals.find(w => w.name === name);
+    if (general) setSelectedGeneral(general as any);
   };
 
   const handleTacticClick = (name: string) => {
-    const tactic = zhanfaData.find(z => z.name === name);
+    const tactic = allTactics.find(z => z.name === name);
     if (tactic) setSelectedTactic(tactic);
   };
 
@@ -173,7 +214,7 @@ export default function Page() {
         const tactics = general.技能.split('\n');
         let matchesForThisGeneral = 0;
         tactics.forEach((tacticName: string) => {
-          const tactic = zhanfaData.find(z => tacticName.includes(z.name));
+          const tactic = allTactics.find(z => tacticName.includes(z.name));
           if (tactic && collectedTactics.includes(tactic.name)) {
             matchesForThisGeneral++;
           }
@@ -361,7 +402,7 @@ export default function Page() {
         return false;
       }
 
-      const isBuiltIn = wujiangData.some(w => w.name === name);
+      const isBuiltIn = wujiangData.some(w => w.武将名 === name);
       if (isBuiltIn) {
         if (shouldCollect) currentCollected.push(name);
         success++;
@@ -701,7 +742,7 @@ export default function Page() {
                     {/* Generals Grid */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                       {activeTeam.config.map((general: any, idx: number) => {
-                        const generalData = allGenerals.find(w => w.name === general.武将);
+                        const generalData = allGenerals.find(w => w.武将名 === general.武将);
                         return (
                         <div key={idx} className="bg-surface-container-lowest rounded-xl shadow-sm border-t-4 border-primary overflow-hidden transition-all hover:shadow-xl">
                           <div className="p-6">
@@ -711,9 +752,9 @@ export default function Page() {
                                 onClick={() => generalData && setSelectedGeneral(generalData)}
                               >
                                 {general.武将}
-                                {generalData?.season && generalData.season !== 'S1' && (
+                                {generalData?.赛季 && generalData.赛季 !== 'S1' && (
                                   <span className="ml-1 text-[10px] px-1.5 py-0.5 bg-surface-container-highest text-outline rounded font-bold align-middle">
-                                    {generalData.season}
+                                    {generalData.赛季}
                                   </span>
                                 )}
                               </h4>
@@ -728,7 +769,7 @@ export default function Page() {
                                   <div className="bg-surface-container-low p-3 rounded-lg">
                                     <div className="grid grid-cols-2 gap-2">
                                       {general.技能.split('\n').map((skillName: string, i: number) => {
-                                        const tactic = zhanfaData.find(z => skillName.includes(z.name));
+                                        const tactic = allTactics.find(z => skillName.includes(z.name));
                                         const isCollected = mounted && tactic && collectedTactics.includes(tactic.name);
                                         return (
                                           <button
@@ -851,6 +892,7 @@ export default function Page() {
               onTacticClick={handleTacticClick}
               onExport={() => setIsWarehouseExportOpen(true)}
               onImport={() => setIsWarehouseImportOpen(true)}
+              onQuickImport={() => setIsWarehouseQuickImportOpen(true)}
               allGenerals={allGenerals}
               allTactics={allTactics}
             />
@@ -864,35 +906,78 @@ export default function Page() {
               title={
                 <div className="flex items-center gap-2">
                   <span>{selectedGeneral.name}</span>
-                  {selectedGeneral.season && selectedGeneral.season !== 'S1' && (
+                  {selectedGeneral.赛季 && selectedGeneral.赛季 !== 'S1' && (
                     <span className="text-xs px-2 py-0.5 bg-surface-container-highest text-outline rounded font-bold">
-                      {selectedGeneral.season}
+                      {selectedGeneral.赛季}
                     </span>
                   )}
                 </div>
               }
-              isCollected={collectedGenerals.includes(selectedGeneral.name)}
-              onToggleCollect={() => toggleCollectGeneral(selectedGeneral.name)}
+              isCollected={collectedGenerals.includes(selectedGeneral.武将名)}
+              onToggleCollect={() => toggleCollectGeneral(selectedGeneral.武将名)}
             >
               <div className="space-y-4">
                 <div className="flex gap-4">
                   <p className="text-sm text-on-surface-variant">阵营: {selectedGeneral.faction}</p>
                   <p className="text-sm text-on-surface-variant">兵种: {selectedGeneral.arms.join(', ')}</p>
                 </div>
+                
+                <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                  <div className="bg-surface-container-low p-2 rounded">
+                    <p className="text-outline mb-1">武力</p>
+                    <p className="font-bold text-on-surface">{selectedGeneral.force}</p>
+                  </div>
+                  <div className="bg-surface-container-low p-2 rounded">
+                    <p className="text-outline mb-1">智力</p>
+                    <p className="font-bold text-on-surface">{selectedGeneral.intelligence}</p>
+                  </div>
+                  <div className="bg-surface-container-low p-2 rounded">
+                    <p className="text-outline mb-1">统率</p>
+                    <p className="font-bold text-on-surface">{selectedGeneral.command}</p>
+                  </div>
+                  <div className="bg-surface-container-low p-2 rounded">
+                    <p className="text-outline mb-1">先攻</p>
+                    <p className="font-bold text-on-surface">{selectedGeneral.speed}</p>
+                  </div>
+                </div>
+
                 <div className="bg-surface-container-low p-4 rounded-lg">
                   <div className="flex justify-between items-center mb-2">
-                    <p className="font-bold text-primary">{selectedGeneral.innate_skill.name}</p>
+                    <p className="font-bold text-primary">{selectedGeneral.innate_skill?.name}</p>
                     <div className="flex gap-2">
-                      {selectedGeneral.innate_skill.trigger && (
-                        <span className="text-[10px] px-2 py-0.5 bg-primary/10 text-primary rounded font-bold uppercase">{selectedGeneral.innate_skill.trigger}</span>
+                      {selectedGeneral.innate_skill?.trigger && (
+                        <span className="text-[10px] px-2 py-0.5 bg-primary/10 text-primary rounded font-bold uppercase">{selectedGeneral.innate_skill?.trigger}</span>
                       )}
-                      {selectedGeneral.innate_skill.probability && (
-                        <span className="text-[10px] px-2 py-0.5 bg-secondary/10 text-secondary rounded font-bold uppercase">{selectedGeneral.innate_skill.probability}</span>
+                      {selectedGeneral.innate_skill?.probability !== undefined && (
+                        <span className="text-[10px] px-2 py-0.5 bg-secondary/10 text-secondary rounded font-bold uppercase">{selectedGeneral.innate_skill.probability * 100}%</span>
                       )}
                     </div>
                   </div>
-                  <p className="text-xs text-on-surface-variant leading-relaxed">{selectedGeneral.innate_skill.description}</p>
+                  <p className="text-xs text-on-surface-variant leading-relaxed">{selectedGeneral.innate_skill?.description}</p>
                 </div>
+
+                {selectedGeneral.fates && selectedGeneral.fates.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-bold text-on-surface">缘分</p>
+                    {selectedGeneral.fates.map((fate, idx) => (
+                      <div key={idx} className="bg-surface-container-low p-3 rounded-lg">
+                        <p className="font-bold text-secondary mb-1">{fate.name}</p>
+                        <p className="text-xs text-on-surface-variant mb-2">{fate.description}</p>
+                        <div className="flex flex-wrap gap-1">
+                          {fate.generals.map((g, i) => (
+                            <button
+                              key={i}
+                              onClick={() => handleGeneralClick(g)}
+                              className="text-[10px] px-2 py-1 bg-surface-container-high hover:bg-primary/10 text-on-surface rounded transition-colors"
+                            >
+                              {g}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </DetailModal>
           )}
@@ -965,15 +1050,19 @@ export default function Page() {
             }))}
             onExport={(ids) => handleExportData('generals', ids)}
             renderPreview={(item) => {
-              const general = allGenerals.find(w => w.name === item.id);
+              const general = allGenerals.find(w => w.武将名 === item.id);
               if (!general) return null;
               return (
                 <div className="space-y-4">
                   <p className="text-sm text-on-surface-variant">阵营: {general.faction}</p>
                   <p className="text-sm text-on-surface-variant">兵种: {general.arms.join(', ')}</p>
                   <div className="bg-surface-container-low p-4 rounded-lg">
-                    <p className="font-bold text-primary mb-2">{general.innate_skill.name}</p>
-                    <p className="text-xs text-on-surface-variant">{general.innate_skill.description}</p>
+                    <p className="font-bold text-primary mb-2">{general.innate_skill?.name}</p>
+                    <p className="text-xs text-on-surface-variant mb-2">{general.innate_skill?.description}</p>
+                    <div className="flex gap-2 text-[10px] text-outline font-bold">
+                      {general.innate_skill?.trigger && <span>类型: {general.innate_skill.trigger}</span>}
+                      {general.innate_skill?.probability !== undefined && <span>概率: {general.innate_skill.probability * 100}%</span>}
+                    </div>
                   </div>
                 </div>
               );
@@ -1079,6 +1168,31 @@ export default function Page() {
             isOpen={isShareCodeModalOpen}
             onClose={() => setIsShareCodeModalOpen(false)}
             shareCode={currentShareCode}
+          />
+
+          <WarehouseQuickImportModal
+            isOpen={isWarehouseQuickImportOpen}
+            onClose={() => setIsWarehouseQuickImportOpen(false)}
+            allGenerals={allGenerals}
+            allTactics={allTactics}
+            collectedGenerals={collectedGenerals}
+            collectedTactics={collectedTactics}
+            onImport={(generals, tactics) => {
+              const newCollectedG = [...collectedGenerals];
+              const newCollectedT = [...collectedTactics];
+              
+              generals.forEach(g => {
+                if (!newCollectedG.includes(g)) newCollectedG.push(g);
+              });
+              
+              tactics.forEach(t => {
+                if (!newCollectedT.includes(t)) newCollectedT.push(t);
+              });
+              
+              setCollectedGenerals(newCollectedG);
+              setCollectedTactics(newCollectedT);
+              showToast('快捷录入成功');
+            }}
           />
 
           {toast && (

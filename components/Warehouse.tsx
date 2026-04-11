@@ -14,6 +14,7 @@ interface WarehouseProps {
   onTacticClick: (name: string) => void;
   onExport: () => void;
   onImport: () => void;
+  onQuickImport?: () => void;
   allGenerals?: any[];
   allTactics?: any[];
 }
@@ -27,6 +28,7 @@ export default function Warehouse({
   onTacticClick,
   onExport,
   onImport,
+  onQuickImport,
   allGenerals = wujiangData,
   allTactics = zhanfaData
 }: WarehouseProps) {
@@ -51,6 +53,14 @@ export default function Warehouse({
           <div className="flex items-center gap-4">
             <h2 className="text-3xl font-extrabold text-on-surface font-headline">我的仓库</h2>
             <div className="flex gap-2">
+              <button 
+                onClick={onQuickImport}
+                className="p-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all flex items-center gap-2 text-xs font-bold"
+                title="快捷录入"
+              >
+                <Upload className="w-4 h-4" />
+                快捷录入
+              </button>
               <button 
                 onClick={onExport}
                 className="p-2 bg-surface-container-high text-on-surface rounded-lg hover:bg-surface-container-highest transition-all flex items-center gap-2 text-xs font-bold"

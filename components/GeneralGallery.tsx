@@ -27,14 +27,14 @@ export default function GeneralGallery({
   onExport, 
   onImport,
   onQuickEntry,
-  allGenerals = wujiangData
+  allGenerals = []
 }: GeneralGalleryProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [factionFilter, setFactionFilter] = useState<string>('全部');
   const [armFilter, setArmFilter] = useState<string>('全部');
   const [seasonFilter, setSeasonFilter] = useState<string>('全部');
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedGeneral, setSelectedGeneral] = useState<typeof wujiangData[0] | null>(null);
+  const [selectedGeneral, setSelectedGeneral] = useState<any | null>(null);
 
   const factions = ['全部', ...Array.from(new Set(allGenerals.map(w => w.faction)))];
   const arms = ['全部', ...Array.from(new Set(allGenerals.flatMap(w => w.arms)))];
@@ -45,7 +45,7 @@ export default function GeneralGallery({
   });
 
   const filteredGenerals = allGenerals.filter(w => {
-    const matchesSearch = w.name.includes(searchQuery) || w.innate_skill.name.includes(searchQuery);
+    const matchesSearch = w.name.includes(searchQuery) || w.innate_skill?.name.includes(searchQuery);
     const matchesFaction = factionFilter === '全部' || w.faction === factionFilter;
     const matchesArm = armFilter === '全部' || w.arms.includes(armFilter);
     const matchesSeason = seasonFilter === '全部' || w.season === seasonFilter;
@@ -184,14 +184,14 @@ export default function GeneralGallery({
                   <div className="pt-2 border-t border-outline-variant/20">
                     <div className="flex items-center gap-2 text-primary mb-2">
                       <Swords className="w-4 h-4" />
-                      <span className="text-xs font-bold uppercase">自带技能: {general.innate_skill.name}</span>
+                      <span className="text-xs font-bold uppercase">自带技能: {general.innate_skill?.name}</span>
                     </div>
                     <p className="text-xs text-on-surface-variant leading-relaxed">
-                      {general.innate_skill.description}
+                      {general.innate_skill?.description}
                     </p>
                     <div className="flex gap-2 mt-2 text-[10px] text-outline font-bold">
-                      <span>类型: {general.innate_skill.trigger}</span>
-                      <span>概率: {general.innate_skill.probability * 100}%</span>
+                      {general.innate_skill?.trigger && <span>类型: {general.innate_skill.trigger}</span>}
+                      {general.innate_skill?.probability !== undefined && <span>概率: {general.innate_skill.probability * 100}%</span>}
                     </div>
                   </div>
                 </div>
@@ -218,12 +218,64 @@ export default function GeneralGallery({
           onToggleCollect={() => toggleCollectGeneral(selectedGeneral.name)}
         >
           <div className="space-y-4">
-            <p className="text-sm text-on-surface-variant">阵营: {selectedGeneral.faction}</p>
-            <p className="text-sm text-on-surface-variant">兵种: {selectedGeneral.arms.join(', ')}</p>
-            <div className="bg-surface-container-low p-4 rounded-lg">
-              <p className="font-bold text-primary mb-2">{selectedGeneral.innate_skill.name}</p>
-              <p className="text-xs text-on-surface-variant">{selectedGeneral.innate_skill.description}</p>
+            <div className="flex gap-4">
+              <p className="text-sm text-on-surface-variant">阵营: {selectedGeneral.faction}</p>
+              <p className="text-sm text-on-surface-variant">兵种: {selectedGeneral.arms.join(', ')}</p>
             </div>
+
+            <div className="grid grid-cols-4 gap-2 text-center text-xs">
+              <div className="bg-surface-container-low p-2 rounded">
+                <p className="text-outline mb-1">武力</p>
+                <p className="font-bold text-on-surface">{selectedGeneral.force}</p>
+              </div>
+              <div className="bg-surface-container-low p-2 rounded">
+                <p className="text-outline mb-1">智力</p>
+                <p className="font-bold text-on-surface">{selectedGeneral.intelligence}</p>
+              </div>
+              <div className="bg-surface-container-low p-2 rounded">
+                <p className="text-outline mb-1">统率</p>
+                <p className="font-bold text-on-surface">{selectedGeneral.command}</p>
+              </div>
+              <div className="bg-surface-container-low p-2 rounded">
+                <p className="text-outline mb-1">先攻</p>
+                <p className="font-bold text-on-surface">{selectedGeneral.speed}</p>
+              </div>
+            </div>
+
+            <div className="bg-surface-container-low p-4 rounded-lg">
+              <p className="font-bold text-primary mb-2">{selectedGeneral.innate_skill?.name}</p>
+              <p className="text-xs text-on-surface-variant mb-2">{selectedGeneral.innate_skill?.description}</p>
+              <div className="flex gap-2 text-[10px] text-outline font-bold">
+                {selectedGeneral.innate_skill?.trigger && <span>类型: {selectedGeneral.innate_skill.trigger}</span>}
+                {selectedGeneral.innate_skill?.probability !== undefined && <span>概率: {selectedGeneral.innate_skill.probability * 100}%</span>}
+              </div>
+            </div>
+
+            {selectedGeneral.fates && selectedGeneral.fates.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-bold text-on-surface">缘分</p>
+                {selectedGeneral.fates.map((fate: any, idx: number) => (
+                  <div key={idx} className="bg-surface-container-low p-3 rounded-lg">
+                    <p className="font-bold text-secondary mb-1">{fate.name}</p>
+                    <p className="text-xs text-on-surface-variant mb-2">{fate.description}</p>
+                    <div className="flex flex-wrap gap-1">
+                      {fate.generals.map((g: string, i: number) => (
+                        <button
+                          key={i}
+                          onClick={() => {
+                            const gen = allGenerals.find(w => w.name === g);
+                            if (gen) setSelectedGeneral(gen);
+                          }}
+                          className="text-[10px] px-2 py-1 bg-surface-container-high hover:bg-primary/10 text-on-surface rounded transition-colors"
+                        >
+                          {g}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </DetailModal>
       )}
