@@ -134,12 +134,12 @@ export default function QuickEntryModal({ isOpen, onClose, type, onAdd }: QuickE
                           onClick={() => {
                             setGeneralData(prev => ({
                               ...prev,
-                              arms: prev.arms.includes(a) 
+                              arms: (prev.arms || []).includes(a) 
                                 ? prev.arms.filter(i => i !== a) 
-                                : [...prev.arms, a]
+                                : [...(prev.arms || []), a]
                             }));
                           }}
-                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${generalData.arms.includes(a) ? 'bg-secondary text-white' : 'bg-surface-container-highest text-outline'}`}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${(generalData.arms || []).includes(a) ? 'bg-secondary text-white' : 'bg-surface-container-highest text-outline'}`}
                         >
                           {a}
                         </button>

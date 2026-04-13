@@ -15,8 +15,6 @@ const factionColors: { [key: string]: string } = {
 interface GeneralGalleryProps {
   collectedGenerals: string[];
   toggleCollectGeneral: (name: string) => void;
-  onExport: () => void;
-  onImport: () => void;
   onQuickEntry?: () => void;
   allGenerals?: any[];
 }
@@ -24,8 +22,6 @@ interface GeneralGalleryProps {
 export default function GeneralGallery({ 
   collectedGenerals, 
   toggleCollectGeneral, 
-  onExport, 
-  onImport,
   onQuickEntry,
   allGenerals = []
 }: GeneralGalleryProps) {
@@ -45,14 +41,14 @@ export default function GeneralGallery({
   });
 
   const filteredGenerals = allGenerals.filter(w => {
-    const matchesSearch = w.name.includes(searchQuery) || w.innate_skill?.name.includes(searchQuery);
+    const matchesSearch = (w.name || '').includes(searchQuery) || (w.innate_skill?.name || '').includes(searchQuery);
     const matchesFaction = factionFilter === '全部' || w.faction === factionFilter;
-    const matchesArm = armFilter === '全部' || w.arms.includes(armFilter);
+    const matchesArm = armFilter === '全部' || (w.arms || []).includes(armFilter);
     const matchesSeason = seasonFilter === '全部' || w.season === seasonFilter;
     return matchesSearch && matchesFaction && matchesArm && matchesSeason;
   }).sort((a, b) => {
-    const aCollected = collectedGenerals.includes(a.name);
-    const bCollected = collectedGenerals.includes(b.name);
+    const aCollected = (collectedGenerals || []).includes(a.name);
+    const bCollected = (collectedGenerals || []).includes(b.name);
     if (aCollected && !bCollected) return -1;
     if (!aCollected && bCollected) return 1;
     return 0;
@@ -66,22 +62,6 @@ export default function GeneralGallery({
           <div className="flex items-center gap-4">
             <h2 className="text-3xl font-extrabold text-on-surface font-headline">武将图鉴</h2>
             <div className="flex gap-2">
-              <button 
-                onClick={onExport}
-                className="p-2 bg-surface-container-high text-on-surface rounded-lg hover:bg-surface-container-highest transition-all flex items-center gap-2 text-xs font-bold"
-                title="导出武将"
-              >
-                <Download className="w-4 h-4" />
-                导出
-              </button>
-              <button 
-                onClick={onImport}
-                className="p-2 bg-surface-container-high text-on-surface rounded-lg hover:bg-surface-container-highest transition-all flex items-center gap-2 text-xs font-bold"
-                title="导入武将"
-              >
-                <Upload className="w-4 h-4" />
-                导入
-              </button>
               <button 
                 onClick={onQuickEntry}
                 className="p-2 bg-primary text-white rounded-lg hover:shadow-md transition-all flex items-center gap-2 text-xs font-bold"
@@ -143,7 +123,7 @@ export default function GeneralGallery({
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredGenerals.map((general, idx) => {
-            const isCollected = collectedGenerals.includes(general.name);
+            const isCollected = (collectedGenerals || []).includes(general.name);
             return (
               <div key={idx} className="bg-surface-container-lowest rounded-xl shadow-sm border-t-4 border-primary p-6 transition-all hover:shadow-lg relative cursor-pointer" onClick={() => setSelectedGeneral(general)}>
                 <button 
@@ -214,7 +194,7 @@ export default function GeneralGallery({
               )}
             </div>
           }
-          isCollected={collectedGenerals.includes(selectedGeneral.name)}
+          isCollected={(collectedGenerals || []).includes(selectedGeneral.name)}
           onToggleCollect={() => toggleCollectGeneral(selectedGeneral.name)}
         >
           <div className="space-y-4">

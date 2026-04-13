@@ -242,7 +242,7 @@ export default function TeamEditorModal({ isOpen, onClose, onSave, initialData, 
                             >
                               <span>{skill}</span>
                               {(() => {
-                                const tac = allTactics.find(t => skill.includes(t.name));
+                            const tac = allTactics.find(t => (skill || '').includes(t.name));
                                 return tac?.season && tac.season !== 'S1' && (
                                   <span className="text-[8px] px-1 bg-surface-container-highest text-outline rounded">
                                     {tac.season}

@@ -8,9 +8,16 @@ export function usePersistentCollection(key: string, initialValue: string[]): [s
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(key);
       if (saved) {
-        setTimeout(() => {
-          setCollection(JSON.parse(saved));
-        }, 0);
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            setTimeout(() => {
+              setCollection(parsed);
+            }, 0);
+          }
+        } catch (e) {
+          console.error('Failed to parse persistent collection:', e);
+        }
       }
     }
   }, [key]);
@@ -20,11 +27,16 @@ export function usePersistentCollection(key: string, initialValue: string[]): [s
       isFirstRender.current = false;
       return;
     }
-    localStorage.setItem(key, JSON.stringify(collection));
+    if (Array.isArray(collection)) {
+      localStorage.setItem(key, JSON.stringify(collection));
+    }
   }, [key, collection]);
 
   const toggle = (name: string) => {
-    setCollection(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]);
+    setCollection(prev => {
+      const current = Array.isArray(prev) ? prev : [];
+      return current.includes(name) ? current.filter(n => n !== name) : [...current, name];
+    });
   };
 
   return [collection, toggle, setCollection];
@@ -38,9 +50,16 @@ export function usePersistentState<T>(key: string, initialValue: T): [T, (value:
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(key);
       if (saved) {
-        setTimeout(() => {
-          setState(JSON.parse(saved));
-        }, 0);
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed !== null && parsed !== undefined) {
+            setTimeout(() => {
+              setState(parsed);
+            }, 0);
+          }
+        } catch (e) {
+          console.error('Failed to parse persistent state:', e);
+        }
       }
     }
   }, [key]);
@@ -50,7 +69,9 @@ export function usePersistentState<T>(key: string, initialValue: T): [T, (value:
       isFirstRender.current = false;
       return;
     }
-    localStorage.setItem(key, JSON.stringify(state));
+    if (state !== undefined) {
+      localStorage.setItem(key, JSON.stringify(state));
+    }
   }, [key, state]);
 
   return [state, setState];

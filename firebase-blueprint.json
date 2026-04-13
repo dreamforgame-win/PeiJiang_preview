@@ -1,0 +1,67 @@
+{
+  "entities": {
+    "General": {
+      "title": "General",
+      "description": "武将数据模型",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "武将名称" },
+        "season": { "type": "string", "description": "赛季" }
+      },
+      "required": ["name", "season"]
+    },
+    "Tactic": {
+      "title": "Tactic",
+      "description": "战法数据模型",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "战法名称" },
+        "type": { "type": "string", "description": "战法类型" },
+        "traitType": { "type": "string", "description": "战法特性类型" },
+        "troopType": { "type": "string", "description": "适用兵种" }
+      },
+      "required": ["name", "type"]
+    },
+    "Team": {
+      "title": "Team",
+      "description": "阵容数据模型",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "阵容名称" },
+        "badge": { "type": "string", "description": "标签" },
+        "season": { "type": "string", "description": "赛季" },
+        "generals": { "type": "array", "description": "武将列表" }
+      },
+      "required": ["name", "generals"]
+    },
+    "User": {
+      "title": "User",
+      "description": "用户数据模型，存储个人仓库",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "collectedGenerals": { "type": "array", "items": { "type": "string" } },
+        "collectedTactics": { "type": "array", "items": { "type": "string" } },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "firestore": {
+    "/generals/{generalId}": {
+      "schema": "General",
+      "description": "武将集合"
+    },
+    "/tactics/{tacticId}": {
+      "schema": "Tactic",
+      "description": "战法集合"
+    },
+    "/teams/{teamId}": {
+      "schema": "Team",
+      "description": "阵容集合"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "用户私有数据"
+    }
+  }
+}

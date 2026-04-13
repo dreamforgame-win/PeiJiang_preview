@@ -73,7 +73,7 @@ export default function WarehouseQuickImportModal({
     const newTacticsToCollect: string[] = [];
 
     parsedGenerals.forEach(g => {
-      if (collectedGenerals.includes(g)) {
+      if ((collectedGenerals || []).includes(g)) {
         duplicateCount++;
       } else {
         newGeneralsToCollect.push(g);
@@ -82,7 +82,7 @@ export default function WarehouseQuickImportModal({
     });
 
     parsedTactics.forEach(t => {
-      if (collectedTactics.includes(t)) {
+      if ((collectedTactics || []).includes(t)) {
         duplicateCount++;
       } else {
         newTacticsToCollect.push(t);

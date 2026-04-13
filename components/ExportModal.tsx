@@ -29,7 +29,7 @@ export default function ExportModal({ isOpen, onClose, teams, onGenerateShareCod
 
   const handleToggleSelect = (id: string) => {
     setSelectedIds(prev => 
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+      (prev || []).includes(id) ? prev.filter(i => i !== id) : [...(prev || []), id]
     );
   };
 

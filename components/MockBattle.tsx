@@ -177,12 +177,12 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
 
     let matchedGenerals = 0;
     teamGenerals.forEach((g: string) => {
-      if (selectedGeneralNames.includes(g)) matchedGenerals++;
+      if ((selectedGeneralNames || []).includes(g)) matchedGenerals++;
     });
 
     let matchedTactics = 0;
     teamTactics.forEach((t: string) => {
-      if (selectedTacticNames.includes(t)) matchedTactics++;
+      if ((selectedTacticNames || []).includes(t)) matchedTactics++;
     });
     
     const totalItems = teamGenerals.length + teamTactics.length;
@@ -200,9 +200,9 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
     normalizedTeams.forEach(team => {
       let contains = false;
       if (slot.type === 'general') {
-        contains = team.generals?.some((g: any) => g.name === slot.data.name);
+        contains = (team.generals || []).some((g: any) => g.name === slot.data.name);
       } else {
-        contains = team.generals?.some((g: any) => g.tactics?.includes(slot.data.name));
+        contains = (team.generals || []).some((g: any) => (g.tactics || []).includes(slot.data.name));
       }
       
       if (contains) {
@@ -674,9 +674,9 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
             {(() => {
               const matchingTeams = normalizedTeams.filter(team => {
                 if (simulationItem.type === 'general') {
-                  return team.generals?.some((g: any) => g.name === simulationItem.data.name);
+                  return (team.generals || []).some((g: any) => g.name === simulationItem.data.name);
                 } else {
-                  return team.generals?.some((g: any) => g.tactics?.includes(simulationItem.data.name));
+                  return (team.generals || []).some((g: any) => (g.tactics || []).includes(simulationItem.data.name));
                 }
               });
 
@@ -736,14 +736,14 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
                         <div className="space-y-2">
                           {team.generals.map((gen: any, gIdx: number) => (
                             <div key={gIdx} className="text-xs flex items-center gap-2">
-                              <span className={`font-bold whitespace-nowrap ${warehouseGeneralNames.includes(gen.name) ? 'text-green-600' : 'text-gray-700'}`}>
+                              <span className={`font-bold whitespace-nowrap ${(warehouseGeneralNames || []).includes(gen.name) ? 'text-green-600' : 'text-gray-700'}`}>
                                 {gen.name}
                               </span>
                               <div className="flex flex-wrap gap-1 overflow-x-auto whitespace-nowrap max-w-[200px] scrollbar-hide">
                                 {gen.tactics.map((tac: string, tIdx: number) => (
                                   <span 
                                     key={tIdx} 
-                                    className={`px-1.5 py-0.5 rounded bg-surface-container-highest border border-outline-variant/20 ${warehouseTacticNames.includes(tac) ? 'text-green-600 font-bold' : 'text-gray-500'}`}
+                                    className={`px-1.5 py-0.5 rounded bg-surface-container-highest border border-outline-variant/20 ${(warehouseTacticNames || []).includes(tac) ? 'text-green-600 font-bold' : 'text-gray-500'}`}
                                   >
                                     {tac}
                                   </span>

@@ -1,6 +1,21 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 12px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
 @theme {
   --color-primary: #760009;
   --color-primary-container: #991b1b;
@@ -25,16 +40,4 @@ body {
   background-color: var(--color-surface);
   color: var(--color-on-surface);
   line-height: 1.7;
-}
-
-/* Hide scrollbar for cleaner look in lists */
-::-webkit-scrollbar {
-  width: 4px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--color-surface-container-highest);
-  border-radius: 10px;
 }

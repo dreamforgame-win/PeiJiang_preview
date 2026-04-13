@@ -18,9 +18,9 @@ export default function SelectionModal({ isOpen, onClose, onSelect, items, title
   if (!isOpen) return null;
 
   const filteredItems = items.filter(item => 
-    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (item.faction && item.faction.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (item.type && item.type.toLowerCase().includes(searchQuery.toLowerCase()))
+    (item.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (item.faction && (item.faction || '').toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (item.type && (item.type || '').toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (

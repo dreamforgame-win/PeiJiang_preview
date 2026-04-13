@@ -36,12 +36,12 @@ export default function Warehouse({
   const [searchQuery, setSearchQuery] = useState('');
 
   const generals = allGenerals.filter(w => 
-    collectedGenerals.includes(w.name) && 
+    (collectedGenerals || []).includes(w.name) && 
     w.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
   const tactics = allTactics.filter(z => 
-    collectedTactics.includes(z.name) && 
+    (collectedTactics || []).includes(z.name) && 
     (z.name.toLowerCase().includes(searchQuery.toLowerCase()) || z.description.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 

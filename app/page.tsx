@@ -1,13 +1,17 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import Image from 'next/image';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { 
   Search, Bell, Settings, Users, Medal, BookOpen, Library, 
   Compass, Plus, List, Quote, Share2, Heart, Swords, 
   Shield, Zap, Book, Clock, BarChart2, Edit, ChevronRight, ChevronDown, Download,
-  CheckCircle, AlertCircle
+  CheckCircle, AlertCircle, LogIn, LogOut
 } from 'lucide-react';
-import { teams } from '@/lib/data';
+import { collection, onSnapshot, query, orderBy, doc, setDoc, getDoc } from 'firebase/firestore';
+import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User } from 'firebase/auth';
+import { db, auth } from '@/firebase';
+import { teams as localTeams } from '@/lib/data';
 import GeneralGallery from '@/components/GeneralGallery';
 import ZhanfaLibrary from '@/components/ZhanfaLibrary';
 import Warehouse from '@/components/Warehouse';
@@ -29,18 +33,26 @@ import { generateShareCode } from '@/lib/shareCode';
 
 export default function Page() {
   const [mounted, setMounted] = useState(false);
-  const [allTeams, setAllTeams] = usePersistentState('allTeams', teams);
-  const [activeTeamId, setActiveTeamId] = useState(allTeams[0]?.id || teams[0].id);
+  const [user, setUser] = useState<User | null>(null);
+  
+  // Firestore Data
+  const [dbGenerals, setDbGenerals] = useState<any[]>([]);
+  const [dbTactics, setDbTactics] = useState<any[]>([]);
+  const [dbTeams, setDbTeams] = useState<any[]>([]);
+
+  const [allTeams, setAllTeams] = usePersistentState('allTeams', localTeams);
+  const currentTeams = useMemo(() => {
+    if (dbTeams.length > 0) return dbTeams;
+    return allTeams;
+  }, [dbTeams, allTeams]);
+
+  const [activeTeamId, setActiveTeamId] = useState(currentTeams[0]?.id || localTeams[0].id);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'teams' | 'generals' | 'zhanfa' | 'collection' | 'mockBattle'>('teams');
   const [teamSubTab, setTeamSubTab] = useState<'all' | 'recommended' | 'custom'>('all');
   const [isTeamsExpanded, setIsTeamsExpanded] = useState(true);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [isGeneralExportOpen, setIsGeneralExportOpen] = useState(false);
-  const [isGeneralImportOpen, setIsGeneralImportOpen] = useState(false);
-  const [isTacticExportOpen, setIsTacticExportOpen] = useState(false);
-  const [isTacticImportOpen, setIsTacticImportOpen] = useState(false);
   const [isWarehouseExportOpen, setIsWarehouseExportOpen] = useState(false);
   const [isWarehouseImportOpen, setIsWarehouseImportOpen] = useState(false);
   const [isWarehouseQuickImportOpen, setIsWarehouseQuickImportOpen] = useState(false);
@@ -70,53 +82,72 @@ export default function Page() {
 
   const [favoritedTeams, toggleFavoriteTeam] = usePersistentCollection('favoritedTeams', []);
 
-  const allTactics = [
-    ...customTactics.filter(ct => !zhanfaData.some(zt => zt.name === ct.name)),
-    ...zhanfaData
-  ];
+  const allTactics = useMemo(() => {
+    const baseTactics = dbTactics.length > 0 ? dbTactics : zhanfaData;
+    return [
+      ...customTactics.filter(ct => !baseTactics.some(zt => zt.name === ct.name)),
+      ...baseTactics
+    ];
+  }, [dbTactics, customTactics]);
 
-  const allGenerals = [
-    ...customGenerals.filter(cg => !wujiangData.some(wg => wg.武将名 === cg.name)).map(cg => {
-      const tactic = allTactics.find(t => t.name === cg.innate_skill?.name);
-      return {
-        ...cg,
-        innate_skill: tactic ? {
-          name: tactic.name,
-          trigger: tactic.type,
-          probability: tactic.probability,
-          description: tactic.description
-        } : cg.innate_skill
-      };
-    }),
-    ...wujiangData.map(w => {
-      const tactic = allTactics.find(t => t.name === w.自带战法);
-      return { 
-        ...w, 
-        name: w.武将名, 
-        faction: w.阵营, 
-        arms: w.兵种.split(','), 
-        season: w.赛季,
-        force: w.武力,
-        command: w.统帅,
-        intelligence: w.智力,
-        speed: w.先攻,
-        fates: w.缘分详情合集 ? w.缘分详情合集.split('; ').map(f => {
-          const parts = f.split('|');
-          return {
-            name: parts[0],
-            description: parts[1],
-            generals: parts[2] ? parts[2].split('/') : []
-          };
-        }) : [],
-        innate_skill: tactic ? {
-          name: tactic.name,
-          trigger: tactic.type,
-          probability: tactic.probability,
-          description: tactic.description
-        } : { name: w.自带战法 } 
-      };
-    })
-  ];
+  const allGenerals = useMemo(() => {
+    const baseGenerals = dbGenerals.length > 0 ? dbGenerals.map(g => ({
+      ...g,
+      武将名: g.name,
+      阵营: g.faction,
+      兵种: Array.isArray(g.arms) ? g.arms.join(',') : g.arms,
+      赛季: g.season,
+      武力: g.force,
+      统帅: g.command,
+      智力: g.intelligence,
+      先攻: g.speed,
+      自带战法: g.innate_skill,
+      缘分详情合集: g.fate
+    })) : wujiangData;
+
+    return [
+      ...customGenerals.filter(cg => !baseGenerals.some(wg => wg.武将名 === cg.name)).map(cg => {
+        const tactic = allTactics.find(t => t.name === cg.innate_skill?.name);
+        return {
+          ...cg,
+          innate_skill: tactic ? {
+            name: tactic.name,
+            trigger: tactic.type,
+            probability: tactic.probability,
+            description: tactic.description
+          } : cg.innate_skill
+        };
+      }),
+      ...baseGenerals.map(w => {
+        const tactic = allTactics.find(t => t.name === w.自带战法);
+        return { 
+          ...w, 
+          name: w.武将名, 
+          faction: w.阵营, 
+          arms: typeof w.兵种 === 'string' ? w.兵种.split(',') : (Array.isArray(w.兵种) ? w.兵种 : []), 
+          season: w.赛季,
+          force: w.武力,
+          command: w.统帅,
+          intelligence: w.智力,
+          speed: w.先攻,
+          fates: w.缘分详情合集 ? w.缘分详情合集.split('; ').map((f: string) => {
+            const parts = f.split('|');
+            return {
+              name: parts[0],
+              description: parts[1],
+              generals: parts[2] ? parts[2].split('/') : []
+            };
+          }) : [],
+          innate_skill: tactic ? {
+            name: tactic.name,
+            trigger: tactic.type,
+            probability: tactic.probability,
+            description: tactic.description
+          } : { name: w.自带战法 } 
+        };
+      })
+    ];
+  }, [dbGenerals, customGenerals, allTactics]);
 
   const handleQuickEntry = async (type: 'general' | 'tactic', data: any) => {
     try {
@@ -150,7 +181,92 @@ export default function Page() {
 
   useEffect(() => {
     setMounted(true);
+
+    // Auth Listener
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+
+    // Firestore Sync
+    const unsubscribeGenerals = onSnapshot(collection(db, 'generals'), (snapshot) => {
+      setDbGenerals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
+    const unsubscribeTactics = onSnapshot(collection(db, 'tactics'), (snapshot) => {
+      setDbTactics(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
+    const unsubscribeTeams = onSnapshot(collection(db, 'teams'), (snapshot) => {
+      setDbTeams(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
+    return () => {
+      unsubscribeAuth();
+      unsubscribeGenerals();
+      unsubscribeTactics();
+      unsubscribeTeams();
+    };
   }, []);
+
+  // Sync Warehouse to Firestore
+  useEffect(() => {
+    if (user && mounted) {
+      const syncWarehouse = async () => {
+        const userDoc = doc(db, 'users', user.uid);
+        const docSnap = await getDoc(userDoc);
+        
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.collectedGenerals) setCollectedGenerals(data.collectedGenerals);
+          if (data.collectedTactics) setCollectedTactics(data.collectedTactics);
+        } else {
+          // Initialize user doc
+          await setDoc(userDoc, {
+            email: user.email,
+            collectedGenerals: [],
+            collectedTactics: [],
+            updatedAt: new Date()
+          });
+        }
+      };
+      syncWarehouse();
+    }
+  }, [user, mounted, setCollectedGenerals, setCollectedTactics]);
+
+  // Save Warehouse changes to Firestore
+  useEffect(() => {
+    if (user && mounted) {
+      const saveWarehouse = async () => {
+        const userDoc = doc(db, 'users', user.uid);
+        await setDoc(userDoc, {
+          collectedGenerals,
+          collectedTactics,
+          updatedAt: new Date()
+        }, { merge: true });
+      };
+      saveWarehouse();
+    }
+  }, [collectedGenerals, collectedTactics, user, mounted]);
+
+  const handleLogin = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      showToast('登录成功');
+    } catch (error) {
+      console.error('Login failed:', error);
+      showToast('登录失败', 'error');
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      showToast('已退出登录');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
 
   // Data Migration: Rename 甄姬 to 甄洛
   useEffect(() => {
@@ -158,21 +274,21 @@ export default function Page() {
       const migrateName = (name: string) => name === '甄姬' ? '甄洛' : name;
       
       // 1. Migrate collectedGenerals
-      const hasOldGeneral = collectedGenerals.includes('甄姬');
+      const hasOldGeneral = (collectedGenerals || []).includes('甄姬');
       if (hasOldGeneral) {
-        setCollectedGenerals(prev => prev.map(migrateName));
+        setCollectedGenerals(prev => (prev || []).map(migrateName));
       }
       
       // 2. Migrate allTeams
-      const needsTeamMigration = allTeams.some(team => 
-        team.desc.includes('甄姬') || 
-        team.config.some((c: any) => c.武将 === '甄姬')
+      const needsTeamMigration = (allTeams || []).some(team => 
+        (team.desc || '').includes('甄姬') || 
+        (team.config || []).some((c: any) => c.武将 === '甄姬')
       );
       if (needsTeamMigration) {
-        setAllTeams(prev => prev.map(team => ({
+        setAllTeams(prev => (prev || []).map(team => ({
           ...team,
-          desc: team.desc.replace(/甄姬/g, '甄洛'),
-          config: team.config.map((c: any) => ({
+          desc: (team.desc || '').replace(/甄姬/g, '甄洛'),
+          config: (team.config || []).map((c: any) => ({
             ...c,
             武将: migrateName(c.武将)
           }))
@@ -200,22 +316,22 @@ export default function Page() {
     if (tactic) setSelectedTactic(tactic);
   };
 
-  const calculateMatchPercentage = (team: any) => {
+  const calculateMatchPercentage = useCallback((team: any) => {
     let score = 0;
     let generalMatches = 0;
     let tacticMatches = 0;
 
-    team.config.forEach((general: any) => {
-      const isGeneralCollected = collectedGenerals.includes(general.武将);
+    (team.config || []).forEach((general: any) => {
+      const isGeneralCollected = (collectedGenerals || []).includes(general.武将);
       if (isGeneralCollected) {
         score += 11;
         generalMatches++;
         
-        const tactics = general.技能.split('\n');
+        const tactics = (general.技能 || '').split('\n');
         let matchesForThisGeneral = 0;
         tactics.forEach((tacticName: string) => {
-          const tactic = allTactics.find(z => tacticName.includes(z.name));
-          if (tactic && collectedTactics.includes(tactic.name)) {
+          const tactic = allTactics.find(z => (tacticName || '').includes(z.name));
+          if (tactic && (collectedTactics || []).includes(tactic.name)) {
             matchesForThisGeneral++;
           }
         });
@@ -227,13 +343,14 @@ export default function Page() {
 
     if (generalMatches === 3 && tacticMatches === 6) return 100;
     return Math.min(score, 100);
-  };
+  }, [collectedGenerals, collectedTactics, allTactics]);
 
   const filteredTeams = useMemo(() => {
-    const teamsWithMatch = allTeams.map(team => ({
+    const teamsToUse = dbTeams.length > 0 ? dbTeams : allTeams;
+    const teamsWithMatch = teamsToUse.map(team => ({
       ...team,
       matchPercentage: mounted ? calculateMatchPercentage(team) : 0,
-      isFavorited: favoritedTeams.includes(team.id)
+      isFavorited: (favoritedTeams || []).includes(team.id)
     }));
 
     const filtered = teamsWithMatch.filter((team: any) => {
@@ -243,10 +360,10 @@ export default function Page() {
 
       if (!searchQuery) return true;
       const query = searchQuery.toLowerCase();
-      return team.name.toLowerCase().includes(query) ||
-             team.config.some((general: any) => 
-               general.武将.toLowerCase().includes(query) ||
-               general.技能.toLowerCase().includes(query)
+      return (team.name || '').toLowerCase().includes(query) ||
+             (team.config || []).some((general: any) => 
+               (general.武将 || '').toLowerCase().includes(query) ||
+               (general.技能 || '').toLowerCase().includes(query)
              );
     });
 
@@ -258,7 +375,7 @@ export default function Page() {
       });
     }
     return filtered;
-  }, [allTeams, mounted, favoritedTeams, teamSubTab, searchQuery, collectedGenerals, collectedTactics]);
+  }, [allTeams, dbTeams, mounted, favoritedTeams, teamSubTab, searchQuery, calculateMatchPercentage]);
 
   useEffect(() => {
     if (mounted && filteredTeams.length > 0) {
@@ -341,22 +458,16 @@ export default function Page() {
     const getFullGeneral = (name: string) => {
       const g = allGenerals.find(w => w.name === name);
       if (!g) return null;
-      return { ...g, isCollected: collectedGenerals.includes(name) };
+      return { ...g, isCollected: (collectedGenerals || []).includes(name) };
     };
 
     const getFullTactic = (name: string) => {
       const t = allTactics.find(z => z.name === name);
       if (!t) return null;
-      return { ...t, isCollected: collectedTactics.includes(name) };
+      return { ...t, isCollected: (collectedTactics || []).includes(name) };
     };
 
-    if (type === 'generals') {
-      data = selectedIds.map(id => getFullGeneral(id)).filter(Boolean);
-      filename = `generals_export_${new Date().toISOString().slice(0, 10)}.json`;
-    } else if (type === 'tactics') {
-      data = selectedIds.map(id => getFullTactic(id)).filter(Boolean);
-      filename = `tactics_export_${new Date().toISOString().slice(0, 10)}.json`;
-    } else {
+    if (type === 'warehouse') {
       // Warehouse
       const generals = selectedIds
         .filter(id => id.startsWith('g:'))
@@ -368,6 +479,8 @@ export default function Page() {
         .filter(Boolean);
       data = { generals, tactics };
       filename = `warehouse_export_${new Date().toISOString().slice(0, 10)}.json`;
+    } else {
+      return;
     }
 
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -380,9 +493,7 @@ export default function Page() {
     downloadAnchorNode.remove();
     URL.revokeObjectURL(url);
     
-    if (type === 'generals') setIsGeneralExportOpen(false);
-    else if (type === 'tactics') setIsTacticExportOpen(false);
-    else setIsWarehouseExportOpen(false);
+    setIsWarehouseExportOpen(false);
   };
 
   const handleImportData = (type: 'generals' | 'tactics' | 'warehouse', data: any) => {
@@ -448,21 +559,7 @@ export default function Page() {
       }
     };
 
-    if (type === 'generals') {
-      if (!Array.isArray(data)) return { success: 0, duplicate: 0, failed: 1 };
-      const newCollected = [...collectedGenerals];
-      const newCustom = [...customGenerals];
-      data.forEach((item: any) => processGeneral(item, newCollected, newCustom));
-      setCollectedGenerals(newCollected);
-      setCustomGenerals(newCustom);
-    } else if (type === 'tactics') {
-      if (!Array.isArray(data)) return { success: 0, duplicate: 0, failed: 1 };
-      const newCollected = [...collectedTactics];
-      const newCustom = [...customTactics];
-      data.forEach((item: any) => processTactic(item, newCollected, newCustom));
-      setCollectedTactics(newCollected);
-      setCustomTactics(newCustom);
-    } else {
+    if (type === 'warehouse') {
       // Warehouse
       const newCollectedG = [...collectedGenerals];
       const newCustomG = [...customGenerals];
@@ -479,13 +576,15 @@ export default function Page() {
       setCustomGenerals(newCustomG);
       setCollectedTactics(newCollectedT);
       setCustomTactics(newCustomT);
+    } else {
+      return { success: 0, duplicate: 0, failed: 1 };
     }
 
     return { success, duplicate, failed };
   };
 
   const handleGenerateShareCode = (selectedIds: string[]) => {
-    const selectedTeams = allTeams.filter((t: any) => selectedIds.includes(t.id));
+    const selectedTeams = (allTeams || []).filter((t: any) => (selectedIds || []).includes(t.id));
     const code = generateShareCode(selectedTeams);
     setCurrentShareCode(code);
     setIsShareCodeModalOpen(true);
@@ -514,6 +613,27 @@ export default function Page() {
             </div>
           )}
           <div className="flex items-center gap-4">
+            {user ? (
+              <div className="flex items-center gap-3">
+                <div className="relative w-8 h-8 rounded-full border border-primary/20 overflow-hidden">
+                  <Image 
+                    src={user.photoURL || 'https://picsum.photos/seed/user/100/100'} 
+                    alt={user.displayName || 'User'} 
+                    fill 
+                    className="object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+                <button onClick={handleLogout} className="text-on-surface-variant hover:text-primary transition-colors">
+                  <LogOut className="w-5 h-5" />
+                </button>
+              </div>
+            ) : (
+              <button onClick={handleLogin} className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-primary-container transition-all">
+                <LogIn className="w-4 h-4" />
+                登录
+              </button>
+            )}
             <button className="text-on-surface-variant hover:bg-surface-container-high p-2 rounded-full transition-colors">
               <Bell className="w-5 h-5" />
             </button>
@@ -557,7 +677,7 @@ export default function Page() {
                     className={`w-full flex items-center gap-3 px-4 py-2 text-xs font-bold rounded-md transition-all ${activeTab === 'teams' && teamSubTab === 'recommended' ? 'text-primary bg-primary/5' : 'text-outline hover:text-primary hover:bg-surface-container-highest'}`}
                   >
                     <div className={`w-1.5 h-1.5 rounded-full ${activeTab === 'teams' && teamSubTab === 'recommended' ? 'bg-primary' : 'bg-outline/40'}`} />
-                    推荐阵容
+                    S2 推荐阵容
                   </button>
                   <button 
                     onClick={() => { setActiveTab('teams'); setTeamSubTab('custom'); }}
@@ -658,6 +778,11 @@ export default function Page() {
                           }`}>
                             {team.name}
                           </span>
+                          {team.season && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-sm font-bold bg-orange-100 text-orange-700 shrink-0">
+                              {team.season}
+                            </span>
+                          )}
                           {mounted && team.matchPercentage > 0 && (
                             <span className="text-[10px] px-2 py-0.5 rounded-sm font-bold bg-green-100 text-green-700 shrink-0">
                               匹配：{team.matchPercentage}%
@@ -695,6 +820,11 @@ export default function Page() {
                           <h1 className="text-4xl md:text-5xl font-extrabold text-on-surface tracking-tight font-headline">
                             {activeTeam.name}
                           </h1>
+                          {activeTeam.season && (
+                            <span className="bg-orange-500 text-white text-xs px-3 py-1 rounded-sm font-bold">
+                              {activeTeam.season}
+                            </span>
+                          )}
                           <span className="bg-primary text-white text-xs px-4 py-1.5 rounded-sm font-bold tracking-widest uppercase">
                             {activeTeam.badge}
                           </span>
@@ -748,7 +878,7 @@ export default function Page() {
                           <div className="p-6">
                             <div className="flex justify-between items-center mb-6">
                               <h4 
-                                className={`text-2xl font-black font-headline cursor-pointer hover:text-primary transition-colors ${(mounted && collectedGenerals.includes(general.武将)) ? 'text-green-600' : 'text-on-surface'}`}
+                                className={`text-2xl font-black font-headline cursor-pointer hover:text-primary transition-colors ${(mounted && (collectedGenerals || []).includes(general.武将)) ? 'text-green-600' : 'text-on-surface'}`}
                                 onClick={() => generalData && setSelectedGeneral(generalData)}
                               >
                                 {general.武将}
@@ -769,8 +899,8 @@ export default function Page() {
                                   <div className="bg-surface-container-low p-3 rounded-lg">
                                     <div className="grid grid-cols-2 gap-2">
                                       {general.技能.split('\n').map((skillName: string, i: number) => {
-                                        const tactic = allTactics.find(z => skillName.includes(z.name));
-                                        const isCollected = mounted && tactic && collectedTactics.includes(tactic.name);
+                                        const tactic = allTactics.find(z => (skillName || '').includes(z.name));
+                                        const isCollected = mounted && tactic && (collectedTactics || []).includes(tactic.name);
                                         return (
                                           <button
                                             key={i}
@@ -868,8 +998,6 @@ export default function Page() {
             <GeneralGallery 
               collectedGenerals={collectedGenerals} 
               toggleCollectGeneral={toggleCollectGeneral} 
-              onExport={() => setIsGeneralExportOpen(true)}
-              onImport={() => setIsGeneralImportOpen(true)}
               onQuickEntry={() => setIsGeneralQuickEntryOpen(true)}
               allGenerals={allGenerals}
             />
@@ -877,8 +1005,6 @@ export default function Page() {
             <ZhanfaLibrary 
               collectedTactics={collectedTactics} 
               toggleCollectTactic={toggleCollectTactic} 
-              onExport={() => setIsTacticExportOpen(true)}
-              onImport={() => setIsTacticImportOpen(true)}
               onQuickEntry={() => setIsTacticQuickEntryOpen(true)}
               allTactics={allTactics}
             />
@@ -913,7 +1039,7 @@ export default function Page() {
                   )}
                 </div>
               }
-              isCollected={collectedGenerals.includes(selectedGeneral.武将名)}
+              isCollected={(collectedGenerals || []).includes(selectedGeneral.武将名)}
               onToggleCollect={() => toggleCollectGeneral(selectedGeneral.武将名)}
             >
               <div className="space-y-4">
@@ -995,13 +1121,19 @@ export default function Page() {
                   )}
                 </div>
               }
-              isCollected={collectedTactics.includes(selectedTactic.name)}
+              isCollected={(collectedTactics || []).includes(selectedTactic.name)}
               onToggleCollect={() => toggleCollectTactic(selectedTactic.name)}
             >
               <div className="space-y-4">
-                <p className="text-sm text-on-surface-variant">类型: {selectedTactic.type}</p>
-                <p className="text-sm text-on-surface-variant">目标: {selectedTactic.target}</p>
-                <p className="text-sm text-on-surface-variant">发动概率: {selectedTactic.probability * 100}%</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <p className="text-sm text-on-surface-variant">类型: {selectedTactic.type}</p>
+                  <p className="text-sm text-on-surface-variant">特性: {selectedTactic.traitType || '通用'}</p>
+                  <p className="text-sm text-on-surface-variant">发动概率: {selectedTactic.probability * 100}%</p>
+                  <p className="text-sm text-on-surface-variant">目标: {selectedTactic.target}</p>
+                </div>
+                {selectedTactic.troopType && (
+                  <p className="text-sm text-on-surface-variant">适用兵种: {selectedTactic.troopType}</p>
+                )}
                 <div className="bg-surface-container-low p-4 rounded-lg">
                   <p className="text-xs text-on-surface-variant">{selectedTactic.description}</p>
                 </div>
@@ -1037,85 +1169,6 @@ export default function Page() {
             shareCode={currentShareCode}
           />
 
-          {/* General Codex Modals */}
-          <GenericExportModal 
-            isOpen={isGeneralExportOpen}
-            onClose={() => setIsGeneralExportOpen(false)}
-            title="导出武将"
-            items={allGenerals.map(w => ({ 
-              id: w.name, 
-              name: w.name, 
-              subtitle: w.faction,
-              isCollected: collectedGenerals.includes(w.name)
-            }))}
-            onExport={(ids) => handleExportData('generals', ids)}
-            renderPreview={(item) => {
-              const general = allGenerals.find(w => w.武将名 === item.id);
-              if (!general) return null;
-              return (
-                <div className="space-y-4">
-                  <p className="text-sm text-on-surface-variant">阵营: {general.faction}</p>
-                  <p className="text-sm text-on-surface-variant">兵种: {general.arms.join(', ')}</p>
-                  <div className="bg-surface-container-low p-4 rounded-lg">
-                    <p className="font-bold text-primary mb-2">{general.innate_skill?.name}</p>
-                    <p className="text-xs text-on-surface-variant mb-2">{general.innate_skill?.description}</p>
-                    <div className="flex gap-2 text-[10px] text-outline font-bold">
-                      {general.innate_skill?.trigger && <span>类型: {general.innate_skill.trigger}</span>}
-                      {general.innate_skill?.probability !== undefined && <span>概率: {general.innate_skill.probability * 100}%</span>}
-                    </div>
-                  </div>
-                </div>
-              );
-            }}
-          />
-          <GenericImportModal 
-            isOpen={isGeneralImportOpen}
-            onClose={() => setIsGeneralImportOpen(false)}
-            title="导入武将"
-            onImport={(data) => handleImportData('generals', data)}
-            validateData={(data) => {
-              if (!Array.isArray(data)) throw new Error("文件格式错误，应为武将数组");
-              return data;
-            }}
-          />
-
-          {/* Tactic Codex Modals */}
-          <GenericExportModal 
-            isOpen={isTacticExportOpen}
-            onClose={() => setIsTacticExportOpen(false)}
-            title="导出战法"
-            items={allTactics.map(z => ({ 
-              id: z.name, 
-              name: z.name, 
-              subtitle: z.type,
-              isCollected: collectedTactics.includes(z.name)
-            }))}
-            onExport={(ids) => handleExportData('tactics', ids)}
-            renderPreview={(item) => {
-              const tactic = allTactics.find(z => z.name === item.id);
-              if (!tactic) return null;
-              return (
-                <div className="space-y-4">
-                  <p className="text-sm text-on-surface-variant">类型: {tactic.type}</p>
-                  <p className="text-sm text-on-surface-variant">目标: {tactic.target}</p>
-                  <div className="bg-surface-container-low p-4 rounded-lg">
-                    <p className="text-xs text-on-surface-variant">{tactic.description}</p>
-                  </div>
-                </div>
-              );
-            }}
-          />
-          <GenericImportModal 
-            isOpen={isTacticImportOpen}
-            onClose={() => setIsTacticImportOpen(false)}
-            title="导入战法"
-            onImport={(data) => handleImportData('tactics', data)}
-            validateData={(data) => {
-              if (!Array.isArray(data)) throw new Error("文件格式错误，应为战法数组");
-              return data;
-            }}
-          />
-
           {/* Warehouse Modals */}
           <GenericExportModal 
             isOpen={isWarehouseExportOpen}
@@ -1126,13 +1179,13 @@ export default function Page() {
                 id: `g:${w.name}`, 
                 name: w.name, 
                 subtitle: `武将 - ${w.faction}`,
-                isCollected: collectedGenerals.includes(w.name)
+                isCollected: (collectedGenerals || []).includes(w.name)
               })),
               ...allTactics.map(z => ({ 
                 id: `t:${z.name}`, 
                 name: z.name, 
                 subtitle: `战法 - ${z.type}`,
-                isCollected: collectedTactics.includes(z.name)
+                isCollected: (collectedTactics || []).includes(z.name)
               }))
             ]}
             onExport={(ids) => handleExportData('warehouse', ids)}
@@ -1182,11 +1235,11 @@ export default function Page() {
               const newCollectedT = [...collectedTactics];
               
               generals.forEach(g => {
-                if (!newCollectedG.includes(g)) newCollectedG.push(g);
+                if (!(newCollectedG || []).includes(g)) newCollectedG.push(g);
               });
               
               tactics.forEach(t => {
-                if (!newCollectedT.includes(t)) newCollectedT.push(t);
+                if (!(newCollectedT || []).includes(t)) newCollectedT.push(t);
               });
               
               setCollectedGenerals(newCollectedG);

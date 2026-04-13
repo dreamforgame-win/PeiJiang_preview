@@ -15,8 +15,6 @@ const typeColors: { [key: string]: string } = {
 interface ZhanfaLibraryProps {
   collectedTactics: string[];
   toggleCollectTactic: (name: string) => void;
-  onExport: () => void;
-  onImport: () => void;
   onQuickEntry?: () => void;
   allTactics?: any[];
 }
@@ -24,8 +22,6 @@ interface ZhanfaLibraryProps {
 export default function ZhanfaLibrary({ 
   collectedTactics, 
   toggleCollectTactic, 
-  onExport, 
-  onImport,
   onQuickEntry,
   allTactics = zhanfaData
 }: ZhanfaLibraryProps) {
@@ -47,8 +43,8 @@ export default function ZhanfaLibrary({
     (typeFilter === '全部' || z.type === typeFilter) &&
     (seasonFilter === '全部' || z.season === seasonFilter)
   ).sort((a, b) => {
-    const aCollected = collectedTactics.includes(a.name);
-    const bCollected = collectedTactics.includes(b.name);
+    const aCollected = (collectedTactics || []).includes(a.name);
+    const bCollected = (collectedTactics || []).includes(b.name);
     if (aCollected && !bCollected) return -1;
     if (!aCollected && bCollected) return 1;
     return 0;
@@ -63,22 +59,6 @@ export default function ZhanfaLibrary({
             <div className="flex items-center gap-4">
               <h2 className="text-3xl font-extrabold text-on-surface font-headline">战法图鉴</h2>
               <div className="flex gap-2">
-                <button 
-                  onClick={onExport}
-                  className="p-2 bg-surface-container-high text-on-surface rounded-lg hover:bg-surface-container-highest transition-all flex items-center gap-2 text-xs font-bold"
-                  title="导出战法"
-                >
-                  <Download className="w-4 h-4" />
-                  导出
-                </button>
-                <button 
-                  onClick={onImport}
-                  className="p-2 bg-surface-container-high text-on-surface rounded-lg hover:bg-surface-container-highest transition-all flex items-center gap-2 text-xs font-bold"
-                  title="导入战法"
-                >
-                  <Upload className="w-4 h-4" />
-                  导入
-                </button>
                 <button 
                   onClick={onQuickEntry}
                   className="p-2 bg-primary text-white rounded-lg hover:shadow-md transition-all flex items-center gap-2 text-xs font-bold"
@@ -134,7 +114,7 @@ export default function ZhanfaLibrary({
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {filteredZhanfa.map((zhanfa, idx) => {
-            const isCollected = collectedTactics.includes(zhanfa.name);
+            const isCollected = (collectedTactics || []).includes(zhanfa.name);
             return (
               <div key={idx} className="bg-surface-container-lowest rounded-xl shadow-sm border-l-4 border-secondary p-6 transition-all hover:shadow-lg relative cursor-pointer" onClick={() => setSelectedTactic(zhanfa)}>
                 <button 
@@ -188,7 +168,7 @@ export default function ZhanfaLibrary({
               )}
             </div>
           }
-          isCollected={collectedTactics.includes(selectedTactic.name)}
+          isCollected={(collectedTactics || []).includes(selectedTactic.name)}
           onToggleCollect={() => toggleCollectTactic(selectedTactic.name)}
         >
           <div className="space-y-4">
