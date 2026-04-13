@@ -6,10 +6,13 @@ import { db } from '../../firebase';
 import { Plus, Trash2, Save, X, ChevronDown, ChevronUp, Upload } from 'lucide-react';
 
 export default function AdminPanel() {
+  const [isAuthorized, setIsAuthorized] = useState(false);
   const [generals, setGenerals] = useState<any[]>([]);
   const [tactics, setTactics] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'generals' | 'tactics' | 'teams'>('generals');
+  const [buffs, setBuffs] = useState<any[]>([]);
+  const [specialEffects, setSpecialEffects] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'generals' | 'tactics' | 'teams' | 'buffs' | 'special_effects'>('generals');
   const [newItem, setNewItem] = useState<any>({});
   const [isMigrating, setIsMigrating] = useState(false);
   const [migrationStatus, setMigrationStatus] = useState('');
@@ -21,7 +24,13 @@ export default function AdminPanel() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   useEffect(() => {
-    fetchData();
+    const authStatus = localStorage.getItem('admin_authorized');
+    if (authStatus === 'true') {
+      setIsAuthorized(true);
+      fetchData();
+    } else {
+      window.location.href = '/';
+    }
   }, []);
 
   const fetchData = async () => {
@@ -33,6 +42,12 @@ export default function AdminPanel() {
 
     const teamsSnap = await getDocs(collection(db, 'teams'));
     setTeams(teamsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+
+    const buffsSnap = await getDocs(collection(db, 'buffs'));
+    setBuffs(buffsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+
+    const effectsSnap = await getDocs(collection(db, 'special_effects'));
+    setSpecialEffects(effectsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
   };
 
   const addItem = async (collectionName: string) => {
@@ -167,6 +182,14 @@ export default function AdminPanel() {
               description: '',
               traitType: '',
               troopType: ''
+            } : activeTab === 'buffs' ? {
+              name: '',
+              type: '增益',
+              effect: ''
+            } : activeTab === 'special_effects' ? {
+              name: '',
+              type: '坐骑/特效',
+              effect: ''
             } : {
               name: '',
               badge: '',
@@ -183,7 +206,7 @@ export default function AdminPanel() {
           }}
           className="bg-primary text-white px-6 py-3 rounded-xl flex items-center gap-2 font-bold shadow-lg hover:opacity-90 transition-all"
         >
-          <Plus size={20} /> 新增{activeTab === 'generals' ? '武将' : activeTab === 'tactics' ? '战法' : '阵容'}
+          <Plus size={20} /> 新增{activeTab === 'generals' ? '武将' : activeTab === 'tactics' ? '战法' : activeTab === 'teams' ? '阵容' : '效果'}
         </button>
 
         {activeTab === 'teams' && (
@@ -310,6 +333,42 @@ export default function AdminPanel() {
                   </div>
                 )}
 
+                {activeTab === 'buffs' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-500 uppercase">名称</label>
+                      <input className="w-full border p-2 rounded" value={newItem.name || ''} onChange={e => setNewItem({...newItem, name: e.target.value})} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-500 uppercase">状态</label>
+                      <select className="w-full border p-2 rounded" value={newItem.type || '增益'} onChange={e => setNewItem({...newItem, type: e.target.value})}>
+                        {['增益', '减益'].map(t => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </div>
+                    <div className="col-span-full space-y-1">
+                      <label className="text-xs font-bold text-gray-500 uppercase">效果描述</label>
+                      <textarea className="w-full border p-2 rounded h-32" value={newItem.effect || ''} onChange={e => setNewItem({...newItem, effect: e.target.value})} />
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'special_effects' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-500 uppercase">名称</label>
+                      <input className="w-full border p-2 rounded" value={newItem.name || ''} onChange={e => setNewItem({...newItem, name: e.target.value})} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-500 uppercase">类型</label>
+                      <input className="w-full border p-2 rounded" value={newItem.type || ''} onChange={e => setNewItem({...newItem, type: e.target.value})} />
+                    </div>
+                    <div className="col-span-full space-y-1">
+                      <label className="text-xs font-bold text-gray-500 uppercase">效果描述</label>
+                      <textarea className="w-full border p-2 rounded h-32" value={newItem.effect || ''} onChange={e => setNewItem({...newItem, effect: e.target.value})} />
+                    </div>
+                  </div>
+                )}
+
                 {activeTab === 'teams' && (
                   <div className="space-y-6">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -427,11 +486,22 @@ export default function AdminPanel() {
     );
   };
 
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-outline font-bold">正在验证权限...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">演武模拟管理平台</h1>
       <div className="flex gap-4 mb-6 border-b pb-2">
-        {(['generals', 'tactics', 'teams'] as const).map(tab => (
+        {(['generals', 'tactics', 'teams', 'buffs', 'special_effects'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => {
@@ -440,9 +510,9 @@ export default function AdminPanel() {
             }}
             className={`px-4 py-2 rounded-lg font-bold flex items-center gap-2 ${activeTab === tab ? 'bg-primary text-white' : 'bg-surface-container-highest'}`}
           >
-            {tab === 'generals' ? '武将管理' : tab === 'tactics' ? '战法管理' : '阵容管理'}
+            {tab === 'generals' ? '武将管理' : tab === 'tactics' ? '战法管理' : tab === 'teams' ? '阵容管理' : tab === 'buffs' ? '效果管理' : '特效管理'}
             <span className="bg-black/10 px-2 py-0.5 rounded-full text-xs">
-              {tab === 'generals' ? generals.length : tab === 'tactics' ? tactics.length : teams.length}
+              {tab === 'generals' ? generals.length : tab === 'tactics' ? tactics.length : tab === 'teams' ? teams.length : tab === 'buffs' ? buffs.length : specialEffects.length}
             </span>
           </button>
         ))}
@@ -452,7 +522,7 @@ export default function AdminPanel() {
 
       <div className="bg-surface p-4 rounded-xl shadow-sm border">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="font-bold capitalize">{activeTab === 'generals' ? '武将' : activeTab === 'tactics' ? '战法' : '阵容'} 列表</h2>
+          <h2 className="font-bold capitalize">{activeTab === 'generals' ? '武将' : activeTab === 'tactics' ? '战法' : activeTab === 'teams' ? '阵容' : '效果'} 列表</h2>
           {activeTab === 'teams' && (
             <div className="flex items-center gap-4">
               <div className="flex gap-2 overflow-x-auto pb-1 max-w-2xl scrollbar-hide">
@@ -470,7 +540,7 @@ export default function AdminPanel() {
           )}
         </div>
         <div className="space-y-4">
-          {(activeTab === 'generals' ? generals : activeTab === 'tactics' ? tactics : filteredTeams).map(item => (
+          {(activeTab === 'generals' ? generals : activeTab === 'tactics' ? tactics : activeTab === 'buffs' ? buffs : activeTab === 'special_effects' ? specialEffects : filteredTeams).map(item => (
             <div key={item.id} className="border rounded-lg overflow-hidden bg-white">
               <div 
                 className="p-3 flex justify-between items-center cursor-pointer hover:bg-gray-50"

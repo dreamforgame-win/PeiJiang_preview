@@ -44,6 +44,28 @@
         "collectedTactics": { "type": "array", "items": { "type": "string" } },
         "updatedAt": { "type": "string", "format": "date-time" }
       }
+    },
+    "Buff": {
+      "title": "Buff",
+      "description": "效果/状态数据模型",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "名称" },
+        "type": { "type": "string", "description": "状态 (增益/减益)" },
+        "effect": { "type": "string", "description": "效果描述" }
+      },
+      "required": ["name", "type", "effect"]
+    },
+    "SpecialEffect": {
+      "title": "SpecialEffect",
+      "description": "特技/特效数据模型",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "名称" },
+        "type": { "type": "string", "description": "类型 (坐骑/装备等)" },
+        "effect": { "type": "string", "description": "效果描述" }
+      },
+      "required": ["name", "type", "effect"]
     }
   },
   "firestore": {
@@ -58,6 +80,14 @@
     "/teams/{teamId}": {
       "schema": "Team",
       "description": "阵容集合"
+    },
+    "/buffs/{buffId}": {
+      "schema": "Buff",
+      "description": "效果图鉴集合"
+    },
+    "/special_effects/{effectId}": {
+      "schema": "SpecialEffect",
+      "description": "特技特效集合"
     },
     "/users/{userId}": {
       "schema": "User",

@@ -51,6 +51,16 @@ service cloud.firestore {
       allow write: if isAdmin(); // Only admin can write
     }
 
+    match /buffs/{buffId} {
+      allow read: if true; // Publicly readable
+      allow write: if isAdmin(); // Only admin can write
+    }
+
+    match /special_effects/{effectId} {
+      allow read: if true; // Publicly readable
+      allow write: if isAdmin(); // Only admin can write
+    }
+
     match /users/{userId} {
       allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }

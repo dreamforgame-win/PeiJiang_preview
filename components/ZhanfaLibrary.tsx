@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Search, Filter, Target, Zap, Heart, Download, Upload, Plus } from 'lucide-react';
 import DetailModal from './DetailModal';
+import RichText from './RichText';
 
 const typeColors: { [key: string]: string } = {
   '主动': 'bg-red-100 text-red-800',
@@ -16,13 +17,17 @@ interface ZhanfaLibraryProps {
   toggleCollectTactic: (name: string) => void;
   onQuickEntry?: () => void;
   allTactics?: any[];
+  allEffects?: any[];
+  onEffectClick?: (effect: any) => void;
 }
 
 export default function ZhanfaLibrary({ 
   collectedTactics, 
   toggleCollectTactic, 
   onQuickEntry,
-  allTactics = []
+  allTactics = [],
+  allEffects = [],
+  onEffectClick
 }: ZhanfaLibraryProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('全部');
@@ -149,9 +154,12 @@ export default function ZhanfaLibrary({
                     )}
                   </div>
                   
-                  <p className="text-xs text-on-surface-variant leading-relaxed bg-surface-container-low p-3 rounded-lg line-clamp-3 min-h-[4.5em]">
-                    {zhanfa.tactic_description || zhanfa.description}
-                  </p>
+                  <RichText 
+                    text={zhanfa.tactic_description || zhanfa.description} 
+                    effects={allEffects} 
+                    onEffectClick={onEffectClick || (() => {})}
+                    className="text-xs text-on-surface-variant leading-relaxed bg-surface-container-low p-3 rounded-lg line-clamp-3 min-h-[4.5em]"
+                  />
                 </div>
               </div>
             );
@@ -202,9 +210,12 @@ export default function ZhanfaLibrary({
             <div className="space-y-2">
               <p className="text-[10px] font-bold text-outline uppercase px-1">战法详情</p>
               <div className="bg-surface-container-highest/30 p-5 rounded-2xl border border-outline-variant/20 shadow-inner">
-                <p className="text-sm text-on-surface leading-relaxed whitespace-pre-wrap">
-                  {selectedTactic.tactic_description || selectedTactic.description}
-                </p>
+                <RichText 
+                  text={selectedTactic.tactic_description || selectedTactic.description} 
+                  effects={allEffects} 
+                  onEffectClick={onEffectClick || (() => {})}
+                  className="text-sm text-on-surface leading-relaxed whitespace-pre-wrap"
+                />
               </div>
             </div>
           </div>

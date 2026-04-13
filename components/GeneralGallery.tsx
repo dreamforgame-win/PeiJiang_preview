@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Shield, Swords, Heart, Search, Filter, Download, Upload, Plus } from 'lucide-react';
 import DetailModal from './DetailModal';
+import RichText from './RichText';
 
 const factionColors: { [key: string]: string } = {
   '魏': 'bg-blue-100 text-blue-800',
@@ -16,13 +17,17 @@ interface GeneralGalleryProps {
   toggleCollectGeneral: (name: string) => void;
   onQuickEntry?: () => void;
   allGenerals?: any[];
+  allEffects?: any[];
+  onEffectClick?: (effect: any) => void;
 }
 
 export default function GeneralGallery({ 
   collectedGenerals, 
   toggleCollectGeneral, 
   onQuickEntry,
-  allGenerals = []
+  allGenerals = [],
+  allEffects = [],
+  onEffectClick
 }: GeneralGalleryProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [factionFilter, setFactionFilter] = useState<string>('全部');
@@ -160,9 +165,12 @@ export default function GeneralGallery({
                       <Swords className="w-4 h-4" />
                       <span className="text-xs font-bold uppercase">自带战法: {general.tactic_name}</span>
                     </div>
-                    <p className="text-xs text-on-surface-variant leading-relaxed">
-                      {general.tactic_description}
-                    </p>
+                    <RichText 
+                      text={general.tactic_description} 
+                      effects={allEffects} 
+                      onEffectClick={onEffectClick || (() => {})}
+                      className="text-xs text-on-surface-variant leading-relaxed"
+                    />
                     <div className="flex flex-wrap gap-2 mt-2 text-[10px] text-outline font-bold uppercase tracking-wider">
                       {general.tactic_type && <span>类型: {general.tactic_type}</span>}
                       {general.tactic_probability && <span>概率: {general.tactic_probability}</span>}
@@ -217,9 +225,14 @@ export default function GeneralGallery({
               </div>
             </div>
 
-              <div className="bg-surface-container-low p-4 rounded-lg">
+            <div className="bg-surface-container-low p-4 rounded-lg">
                 <p className="font-bold text-primary mb-2">{selectedGeneral.tactic_name}</p>
-                <p className="text-xs text-on-surface-variant mb-3 leading-relaxed">{selectedGeneral.tactic_description}</p>
+                <RichText 
+                  text={selectedGeneral.tactic_description} 
+                  effects={allEffects} 
+                  onEffectClick={onEffectClick || (() => {})}
+                  className="text-xs text-on-surface-variant mb-3 leading-relaxed"
+                />
                 <div className="flex flex-wrap gap-3 text-[10px] text-outline font-bold uppercase tracking-wider">
                   {selectedGeneral.tactic_type && <span>类型: {selectedGeneral.tactic_type}</span>}
                   {selectedGeneral.tactic_probability && <span>概率: {selectedGeneral.tactic_probability}</span>}

@@ -7,8 +7,8 @@ interface DetailModalProps {
   onClose: () => void;
   title: React.ReactNode;
   children: React.ReactNode;
-  isCollected: boolean;
-  onToggleCollect: () => void;
+  isCollected?: boolean;
+  onToggleCollect?: () => void;
 }
 
 export default function DetailModal({ isOpen, onClose, title, children, isCollected, onToggleCollect }: DetailModalProps) {
@@ -24,12 +24,14 @@ export default function DetailModal({ isOpen, onClose, title, children, isCollec
         <div className="mb-6">
           {children}
         </div>
-        <button 
-          onClick={onToggleCollect}
-          className={`w-full py-3 rounded-lg font-bold transition-all ${isCollected ? 'bg-outline-variant text-on-surface' : 'bg-primary text-white'}`}
-        >
-          {isCollected ? '取消收录' : '收录到仓库'}
-        </button>
+        {onToggleCollect !== undefined && (
+          <button 
+            onClick={onToggleCollect}
+            className={`w-full py-3 rounded-lg font-bold transition-all ${isCollected ? 'bg-outline-variant text-on-surface' : 'bg-primary text-white'}`}
+          >
+            {isCollected ? '取消收录' : '收录到仓库'}
+          </button>
+        )}
       </div>
     </div>
   );

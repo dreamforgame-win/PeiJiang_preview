@@ -6,7 +6,7 @@ import {
   Search, Bell, Settings, Users, Medal, BookOpen, Library, 
   Compass, Plus, List, Quote, Share2, Heart, Swords, 
   Shield, Zap, Book, Clock, BarChart2, Edit, ChevronRight, ChevronDown, Download,
-  CheckCircle, AlertCircle, LogIn, LogOut
+  CheckCircle, AlertCircle, LogIn, LogOut, Sparkles
 } from 'lucide-react';
 import { collection, onSnapshot, query, orderBy, doc, setDoc, getDoc } from 'firebase/firestore';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User } from 'firebase/auth';
@@ -25,6 +25,9 @@ import GenericImportModal from '@/components/GenericImportModal';
 import QuickEntryModal from '@/components/QuickEntryModal';
 import ShareCodeModal from '@/components/ShareCodeModal';
 import MockBattle from '@/components/MockBattle';
+import EffectGallery from '@/components/EffectGallery';
+import RichText from '@/components/RichText';
+import RedeemCodeModal from '@/components/RedeemCodeModal';
 import WarehouseQuickImportModal from '@/components/WarehouseQuickImportModal';
 import { generateShareCode } from '@/lib/shareCode';
 
@@ -36,6 +39,8 @@ export default function Page() {
   const [dbGenerals, setDbGenerals] = useState<any[]>([]);
   const [dbTactics, setDbTactics] = useState<any[]>([]);
   const [dbTeams, setDbTeams] = useState<any[]>([]);
+  const [dbBuffs, setDbBuffs] = useState<any[]>([]);
+  const [dbSpecialEffects, setDbSpecialEffects] = useState<any[]>([]);
 
   const [allTeams, setAllTeams] = usePersistentState<any[]>('allTeams', []);
   const currentTeams = useMemo(() => {
@@ -53,7 +58,7 @@ export default function Page() {
 
   const [activeTeamId, setActiveTeamId] = useState(currentTeams[0]?.id || '');
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'teams' | 'generals' | 'zhanfa' | 'collection' | 'mockBattle'>('teams');
+  const [activeTab, setActiveTab] = useState<'teams' | 'generals' | 'zhanfa' | 'collection' | 'mockBattle' | 'effectGallery'>('teams');
   const [teamSubTab, setTeamSubTab] = useState<string>('all');
   const [isTeamsExpanded, setIsTeamsExpanded] = useState(true);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -62,10 +67,12 @@ export default function Page() {
   const [isWarehouseImportOpen, setIsWarehouseImportOpen] = useState(false);
   const [isWarehouseQuickImportOpen, setIsWarehouseQuickImportOpen] = useState(false);
   const [isShareCodeModalOpen, setIsShareCodeModalOpen] = useState(false);
+  const [isRedeemCodeModalOpen, setIsRedeemCodeModalOpen] = useState(false);
   const [currentShareCode, setCurrentShareCode] = useState('');
 
   const [selectedGeneral, setSelectedGeneral] = useState<any | null>(null);
   const [selectedTactic, setSelectedTactic] = useState<any | null>(null);
+  const [selectedEffect, setSelectedEffect] = useState<any | null>(null);
   
   const [isTeamEditorOpen, setIsTeamEditorOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<any>(null);
@@ -91,6 +98,10 @@ export default function Page() {
     const types = new Set(dbTeams.map(t => t.teamType).filter(Boolean));
     return Array.from(types);
   }, [dbTeams]);
+
+  const allEffects = useMemo(() => {
+    return [...dbBuffs, ...dbSpecialEffects];
+  }, [dbBuffs, dbSpecialEffects]);
 
   const allTactics = useMemo(() => {
     const baseTactics = dbTactics;
@@ -199,11 +210,21 @@ export default function Page() {
       setDbTeams(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
     });
 
+    const unsubscribeBuffs = onSnapshot(collection(db, 'buffs'), (snapshot) => {
+      setDbBuffs(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+    });
+
+    const unsubscribeSpecialEffects = onSnapshot(collection(db, 'special_effects'), (snapshot) => {
+      setDbSpecialEffects(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+    });
+
     return () => {
       unsubscribeAuth();
       unsubscribeGenerals();
       unsubscribeTactics();
       unsubscribeTeams();
+      unsubscribeBuffs();
+      unsubscribeSpecialEffects();
     };
   }, []);
 
@@ -268,6 +289,28 @@ export default function Page() {
       showToast('已退出登录');
     } catch (error) {
       console.error('Logout failed:', error);
+    }
+  };
+
+  const handleAdminAuth = async (password: string) => {
+    try {
+      const response = await fetch('/api/admin-auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+
+      if (response.ok) {
+        setIsRedeemCodeModalOpen(false);
+        showToast('验证成功，正在进入管理后台...');
+        localStorage.setItem('admin_authorized', 'true');
+        window.open('/admin', '_blank');
+      } else {
+        const data = await response.json();
+        showToast(data.message || '密码错误', 'error');
+      }
+    } catch (error) {
+      showToast('验证失败', 'error');
     }
   };
 
@@ -622,33 +665,17 @@ export default function Page() {
             </div>
           )}
           <div className="flex items-center gap-4">
-            {user ? (
-              <div className="flex items-center gap-3">
-                <div className="relative w-8 h-8 rounded-full border border-primary/20 overflow-hidden">
-                  <Image 
-                    src={user.photoURL || 'https://picsum.photos/seed/user/100/100'} 
-                    alt={user.displayName || 'User'} 
-                    fill 
-                    className="object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
-                <button onClick={handleLogout} className="text-on-surface-variant hover:text-primary transition-colors">
-                  <LogOut className="w-5 h-5" />
-                </button>
-              </div>
-            ) : (
-              <button onClick={handleLogin} className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-primary-container transition-all">
-                <LogIn className="w-4 h-4" />
-                登录
+            {process.env.NODE_ENV === 'development' && (
+              <button 
+                onClick={() => {
+                  localStorage.setItem('admin_authorized', 'true');
+                  window.open('/admin', '_blank');
+                }}
+                className="text-xs font-bold bg-orange-500 text-white px-3 py-1.5 rounded-lg hover:bg-orange-600 transition-all shadow-sm"
+              >
+                管理后台 (Dev)
               </button>
             )}
-            <button className="text-on-surface-variant hover:bg-surface-container-high p-2 rounded-full transition-colors">
-              <Bell className="w-5 h-5" />
-            </button>
-            <button className="text-on-surface-variant hover:bg-surface-container-high p-2 rounded-full transition-colors">
-              <Settings className="w-5 h-5" />
-            </button>
           </div>
         </div>
       </header>
@@ -717,6 +744,13 @@ export default function Page() {
             >
               <BookOpen className="w-5 h-5" />
               <span className="text-xs uppercase tracking-wider font-bold">战法图鉴</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('effectGallery')}
+              className={`w-full flex items-center gap-3 px-4 py-3 font-bold rounded-lg transition-all ${activeTab === 'effectGallery' ? 'bg-surface-container-lowest text-primary shadow-sm' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container-highest'}`}
+            >
+              <Zap className="w-5 h-5" />
+              <span className="text-xs uppercase tracking-wider font-bold">效果图鉴</span>
             </button>
             <button 
               onClick={() => setActiveTab('collection')}
@@ -1014,6 +1048,8 @@ export default function Page() {
               toggleCollectGeneral={toggleCollectGeneral} 
               onQuickEntry={() => setIsGeneralQuickEntryOpen(true)}
               allGenerals={allGenerals}
+              allEffects={allEffects}
+              onEffectClick={setSelectedEffect}
             />
           ) : activeTab === 'zhanfa' ? (
             <ZhanfaLibrary 
@@ -1021,6 +1057,8 @@ export default function Page() {
               toggleCollectTactic={toggleCollectTactic} 
               onQuickEntry={() => setIsTacticQuickEntryOpen(true)}
               allTactics={allTactics}
+              allEffects={allEffects}
+              onEffectClick={setSelectedEffect}
             />
           ) : activeTab === 'collection' ? (
             <Warehouse 
@@ -1043,6 +1081,13 @@ export default function Page() {
               allTeams={currentTeams} 
               onGeneralClick={handleGeneralClick}
               onTacticClick={handleTacticClick}
+            />
+          ) : activeTab === 'effectGallery' ? (
+            <EffectGallery 
+              buffs={dbBuffs} 
+              specialEffects={dbSpecialEffects} 
+              allEffects={allEffects}
+              onEffectClick={setSelectedEffect}
             />
           ) : null}
           {selectedGeneral && (
@@ -1102,7 +1147,12 @@ export default function Page() {
                       )}
                     </div>
                   </div>
-                  <p className="text-xs text-on-surface-variant leading-relaxed">{selectedGeneral.tactic_description}</p>
+                  <RichText 
+                    text={selectedGeneral.tactic_description} 
+                    effects={allEffects} 
+                    onEffectClick={setSelectedEffect}
+                    className="text-xs text-on-surface-variant leading-relaxed"
+                  />
                 </div>
 
                 {selectedGeneral.fates && selectedGeneral.fates.length > 0 && (
@@ -1158,8 +1208,35 @@ export default function Page() {
                   <p className="text-sm text-on-surface-variant">适用兵种: {selectedTactic.troopType}</p>
                 )}
                 <div className="bg-surface-container-low p-4 rounded-lg">
-                  <p className="text-xs text-on-surface-variant">{selectedTactic.description}</p>
+                  <RichText 
+                    text={selectedTactic.description} 
+                    effects={allEffects} 
+                    onEffectClick={setSelectedEffect}
+                    className="text-xs text-on-surface-variant"
+                  />
                 </div>
+              </div>
+            </DetailModal>
+          )}
+          {selectedEffect && (
+            <DetailModal
+              isOpen={!!selectedEffect}
+              onClose={() => setSelectedEffect(null)}
+              title={
+                <div className="flex items-center gap-2">
+                  <span>{selectedEffect.name}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded font-bold ${
+                    selectedEffect.type.includes('增益') ? 'bg-green-100 text-green-700' : 
+                    selectedEffect.type.includes('减益') ? 'bg-red-100 text-red-700' : 
+                    'bg-amber-100 text-amber-700'
+                  }`}>
+                    {selectedEffect.type}
+                  </span>
+                </div>
+              }
+            >
+              <div className="bg-surface-container-low p-4 rounded-lg">
+                <p className="text-sm text-on-surface-variant leading-relaxed">{selectedEffect.effect}</p>
               </div>
             </DetailModal>
           )}
@@ -1244,6 +1321,12 @@ export default function Page() {
             isOpen={isShareCodeModalOpen}
             onClose={() => setIsShareCodeModalOpen(false)}
             shareCode={currentShareCode}
+          />
+
+          <RedeemCodeModal 
+            isOpen={isRedeemCodeModalOpen}
+            onClose={() => setIsRedeemCodeModalOpen(false)}
+            onConfirm={handleAdminAuth}
           />
 
           <WarehouseQuickImportModal
