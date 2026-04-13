@@ -13,20 +13,24 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-// Initialize Firebase only if config is available
 let app;
+let dbInstance: any = null;
+let authInstance: any = null;
+
 try {
-  if (firebaseConfig.apiKey && firebaseConfig.apiKey !== 'dummy-key') {
+  if (firebaseConfig.apiKey) {
     app = initializeApp(firebaseConfig);
+    const dbId = process.env.NEXT_PUBLIC_FIREBASE_FIRESTORE_DATABASE_ID;
+    dbInstance = dbId && dbId !== '(default)' ? getFirestore(app, dbId) : getFirestore(app);
+    authInstance = getAuth(app);
+    console.log("Firebase initialized successfully");
+  } else {
+    console.warn("Firebase API Key is missing. Database connection will be disabled.");
   }
 } catch (error) {
   console.error("Firebase initialization error:", error);
 }
 
-const dbId = process.env.NEXT_PUBLIC_FIREBASE_FIRESTORE_DATABASE_ID;
-
-// Export db and auth, handling cases where app might not be initialized
-export const db = app 
-  ? (dbId && dbId !== '(default)' ? getFirestore(app, dbId) : getFirestore(app)) 
-  : {} as any;
-export const auth = app ? getAuth(app) : {} as any;
+export const db = dbInstance;
+export const auth = authInstance;
+export const isFirebaseInitialized = !!dbInstance;

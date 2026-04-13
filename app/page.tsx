@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { collection, onSnapshot, query, orderBy, doc, setDoc, getDoc } from 'firebase/firestore';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User } from 'firebase/auth';
-import { db, auth } from '@/firebase';
+import { db, auth, isFirebaseInitialized } from '@/firebase';
 import { teams as localTeams } from '@/lib/data';
 import GeneralGallery from '@/components/GeneralGallery';
 import ZhanfaLibrary from '@/components/ZhanfaLibrary';
@@ -188,11 +188,20 @@ export default function Page() {
     setMounted(true);
 
     // Auth Listener
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
+    let unsubscribeAuth = () => {};
+    if (auth) {
+      unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+        setUser(currentUser);
+      });
+    }
 
     // Firestore Sync
+    if (!isFirebaseInitialized) {
+      console.warn("Firebase not initialized, skipping Firestore sync.");
+      return () => {
+        unsubscribeAuth();
+      };
+    }
     const unsubscribeGenerals = onSnapshot(collection(db, 'generals'), (snapshot) => {
       setDbGenerals(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
     });
@@ -215,7 +224,7 @@ export default function Page() {
 
   // Sync Warehouse to Firestore
   useEffect(() => {
-    if (user && mounted) {
+    if (user && mounted && isFirebaseInitialized) {
       const syncWarehouse = async () => {
         const userDoc = doc(db, 'users', user.uid);
         const docSnap = await getDoc(userDoc);
@@ -240,7 +249,7 @@ export default function Page() {
 
   // Save Warehouse changes to Firestore
   useEffect(() => {
-    if (user && mounted) {
+    if (user && mounted && isFirebaseInitialized) {
       const saveWarehouse = async () => {
         const userDoc = doc(db, 'users', user.uid);
         await setDoc(userDoc, {
@@ -254,6 +263,10 @@ export default function Page() {
   }, [collectedGenerals, collectedTactics, user, mounted]);
 
   const handleLogin = async () => {
+    if (!auth) {
+      console.warn("Firebase Auth not initialized.");
+      return;
+    }
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
