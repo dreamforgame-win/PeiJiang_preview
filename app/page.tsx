@@ -651,9 +651,9 @@ export default function Page() {
             ⚔️ 三谋配将助手
           </span>
         </div>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-6 flex-nowrap">
           {activeTab === 'teams' && (
-            <div className="hidden md:flex relative items-center">
+            <div className="hidden md:flex relative items-center flex-nowrap">
               <input 
                 type="text" 
                 placeholder="搜索名称或武将..." 
@@ -664,14 +664,14 @@ export default function Page() {
               <Search className="absolute right-3 text-outline w-4 h-4" />
             </div>
           )}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-nowrap">
             {process.env.NODE_ENV === 'development' && (
               <button 
                 onClick={() => {
                   localStorage.setItem('admin_authorized', 'true');
                   window.open('/admin', '_blank');
                 }}
-                className="text-xs font-bold bg-orange-500 text-white px-3 py-1.5 rounded-lg hover:bg-orange-600 transition-all shadow-sm"
+                className="text-xs font-bold bg-orange-500 text-white px-3 py-1.5 rounded-lg hover:bg-orange-600 transition-all shadow-sm whitespace-nowrap"
               >
                 管理后台 (Dev)
               </button>
@@ -864,20 +864,20 @@ export default function Page() {
                     {/* Header */}
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
                       <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                          <h1 className="text-4xl md:text-5xl font-extrabold text-on-surface tracking-tight font-headline">
+                        <div className="flex items-center gap-3 flex-nowrap">
+                          <h1 className="text-4xl md:text-5xl font-extrabold text-on-surface tracking-tight font-headline whitespace-nowrap">
                             {activeTeam.name}
                           </h1>
                           {activeTeam.season && (
-                            <span className="bg-orange-500 text-white text-xs px-3 py-1 rounded-sm font-bold">
+                            <span className="bg-orange-500 text-white text-xs px-3 py-1 rounded-sm font-bold whitespace-nowrap">
                               {activeTeam.season}
                             </span>
                           )}
-                          <span className="bg-primary text-white text-xs px-4 py-1.5 rounded-sm font-bold tracking-widest uppercase">
+                          <span className="bg-primary text-white text-xs px-4 py-1.5 rounded-sm font-bold tracking-widest uppercase whitespace-nowrap">
                             {activeTeam.badge}
                           </span>
                         </div>
-                        <div className="relative pl-6 border-l-2 border-secondary py-2 h-16">
+                        <div className="relative pl-6 border-l-2 border-secondary py-2 h-16 max-w-[550px]">
                           <p className="text-on-surface-variant font-medium leading-relaxed italic line-clamp-2">
                             {activeTeam.desc}
                           </p>
