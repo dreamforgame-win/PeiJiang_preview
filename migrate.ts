@@ -35,7 +35,7 @@ export async function migrateData(onProgress: (msg: string, progress: number) =>
         name: w.武将名,
         season: w.赛季,
         faction: w.阵营,
-        arms: w.兵种.split(','),
+        arms: (w.兵种 || '').split(','),
         force: w.武力,
         command: w.统帅,
         intelligence: w.智力,

@@ -106,7 +106,7 @@ export default function TeamEditorModal({ isOpen, onClose, onSave, initialData, 
       handleHeroChange(selectionModal.heroIndex, '武将', item.name);
     } else if (selectionModal.type === 'tactic') {
       const hero = team.config[selectionModal.heroIndex];
-      const tactics = hero.技能.split('\n').filter(s => s.trim() !== "");
+      const tactics = (hero.技能 || '').split('\n').filter(s => s.trim() !== "");
       
       if (selectionModal.tacticIndex !== undefined) {
         tactics[selectionModal.tacticIndex] = item.name;
@@ -234,7 +234,7 @@ export default function TeamEditorModal({ isOpen, onClose, onSave, initialData, 
                     </div>
                     <div className="bg-surface-container-lowest p-3 rounded-xl space-y-2">
                       <div className="grid grid-cols-1 gap-2">
-                        {hero.技能.split('\n').filter(s => s.trim() !== "").map((skill, sIdx) => (
+                        {(hero.技能 || '').split('\n').filter(s => s.trim() !== "").map((skill, sIdx) => (
                           <div key={sIdx} className="flex gap-2">
                             <button 
                               onClick={() => openTacticSelection(idx, sIdx)}
@@ -252,7 +252,7 @@ export default function TeamEditorModal({ isOpen, onClose, onSave, initialData, 
                             </button>
                             <button 
                               onClick={() => {
-                                const tactics = hero.技能.split('\n').filter(s => s.trim() !== "");
+                                const tactics = (hero.技能 || '').split('\n').filter(s => s.trim() !== "");
                                 tactics.splice(sIdx, 1);
                                 handleHeroChange(idx, '技能', tactics.join('\n'));
                               }}
@@ -263,7 +263,7 @@ export default function TeamEditorModal({ isOpen, onClose, onSave, initialData, 
                           </div>
                         ))}
                         <button 
-                          onClick={() => openTacticSelection(idx, hero.技能.split('\n').filter(s => s.trim() !== "").length)}
+                          onClick={() => openTacticSelection(idx, (hero.技能 || '').split('\n').filter(s => s.trim() !== "").length)}
                           className="w-full border-2 border-dashed border-outline-variant/30 py-2 rounded-lg text-[10px] font-bold text-outline hover:border-primary hover:text-primary transition-all flex items-center justify-center gap-2"
                         >
                           <Plus className="w-3 h-3" />

@@ -49,7 +49,7 @@ export default function Page() {
   const [activeTeamId, setActiveTeamId] = useState(currentTeams[0]?.id || localTeams[0].id);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'teams' | 'generals' | 'zhanfa' | 'collection' | 'mockBattle'>('teams');
-  const [teamSubTab, setTeamSubTab] = useState<'all' | 'recommended' | 'custom'>('all');
+  const [teamSubTab, setTeamSubTab] = useState<string>('all');
   const [isTeamsExpanded, setIsTeamsExpanded] = useState(true);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -81,6 +81,11 @@ export default function Page() {
   };
 
   const [favoritedTeams, toggleFavoriteTeam] = usePersistentCollection('favoritedTeams', []);
+
+  const dynamicTeamTypes = useMemo(() => {
+    const types = new Set(dbTeams.map(t => t.teamType).filter(Boolean));
+    return Array.from(types);
+  }, [dbTeams]);
 
   const allTactics = useMemo(() => {
     const baseTactics = dbTactics.length > 0 ? dbTactics : zhanfaData;
@@ -189,15 +194,15 @@ export default function Page() {
 
     // Firestore Sync
     const unsubscribeGenerals = onSnapshot(collection(db, 'generals'), (snapshot) => {
-      setDbGenerals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setDbGenerals(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
     });
 
     const unsubscribeTactics = onSnapshot(collection(db, 'tactics'), (snapshot) => {
-      setDbTactics(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setDbTactics(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
     });
 
     const unsubscribeTeams = onSnapshot(collection(db, 'teams'), (snapshot) => {
-      setDbTeams(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setDbTeams(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
     });
 
     return () => {
@@ -355,9 +360,15 @@ export default function Page() {
 
     const filtered = teamsWithMatch.filter((team: any) => {
       // Filter by sub-tab
-      if (teamSubTab === 'recommended' && team.isCustom) return false;
-      if (teamSubTab === 'custom' && !team.isCustom) return false;
-
+      if (teamSubTab === 'all') {
+        // "All" is an aggregate of all dynamic categories (excluding custom teams)
+        return !!team.teamType;
+      }
+      if (teamSubTab === 'custom') return !!team.isCustom;
+      
+      // Dynamic tabs
+      return team.teamType === teamSubTab;
+    }).filter((team: any) => {
       if (!searchQuery) return true;
       const query = searchQuery.toLowerCase();
       return (team.name || '').toLowerCase().includes(query) ||
@@ -672,13 +683,18 @@ export default function Page() {
                     <div className={`w-1.5 h-1.5 rounded-full ${activeTab === 'teams' && teamSubTab === 'all' ? 'bg-primary' : 'bg-outline/40'}`} />
                     全部阵容
                   </button>
-                  <button 
-                    onClick={() => { setActiveTab('teams'); setTeamSubTab('recommended'); }}
-                    className={`w-full flex items-center gap-3 px-4 py-2 text-xs font-bold rounded-md transition-all ${activeTab === 'teams' && teamSubTab === 'recommended' ? 'text-primary bg-primary/5' : 'text-outline hover:text-primary hover:bg-surface-container-highest'}`}
-                  >
-                    <div className={`w-1.5 h-1.5 rounded-full ${activeTab === 'teams' && teamSubTab === 'recommended' ? 'bg-primary' : 'bg-outline/40'}`} />
-                    S2 推荐阵容
-                  </button>
+                  
+                  {dynamicTeamTypes.map(type => (
+                    <button 
+                      key={type}
+                      onClick={() => { setActiveTab('teams'); setTeamSubTab(type); }}
+                      className={`w-full flex items-center gap-3 px-4 py-2 text-xs font-bold rounded-md transition-all ${activeTab === 'teams' && teamSubTab === type ? 'text-primary bg-primary/5' : 'text-outline hover:text-primary hover:bg-surface-container-highest'}`}
+                    >
+                      <div className={`w-1.5 h-1.5 rounded-full ${activeTab === 'teams' && teamSubTab === type ? 'bg-primary' : 'bg-outline/40'}`} />
+                      {type}
+                    </button>
+                  ))}
+
                   <button 
                     onClick={() => { setActiveTab('teams'); setTeamSubTab('custom'); }}
                     className={`w-full flex items-center gap-3 px-4 py-2 text-xs font-bold rounded-md transition-all ${activeTab === 'teams' && teamSubTab === 'custom' ? 'text-primary bg-primary/5' : 'text-outline hover:text-primary hover:bg-surface-container-highest'}`}
@@ -802,7 +818,7 @@ export default function Page() {
                           </span>
                         </div>
                       </div>
-                      <p className="text-xs text-outline mt-1 line-clamp-1">{team.desc.split('\n')[0]}</p>
+                      <p className="text-xs text-outline mt-1 line-clamp-1">{(team.desc || '').split('\n')[0]}</p>
                     </div>
                   ))}
                 </div>
@@ -898,7 +914,7 @@ export default function Page() {
                                   </div>
                                   <div className="bg-surface-container-low p-3 rounded-lg">
                                     <div className="grid grid-cols-2 gap-2">
-                                      {general.技能.split('\n').map((skillName: string, i: number) => {
+                                      {(general.技能 || '').split('\n').map((skillName: string, i: number) => {
                                         const tactic = allTactics.find(z => (skillName || '').includes(z.name));
                                         const isCollected = mounted && tactic && (collectedTactics || []).includes(tactic.name);
                                         return (

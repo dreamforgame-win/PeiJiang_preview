@@ -253,7 +253,7 @@ export default function ExportModal({ isOpen, onClose, teams, onGenerateShareCod
                         <span className="text-[10px] font-bold uppercase tracking-wider">战法</span>
                       </div>
                       <div className="bg-surface-container-high/50 p-2 rounded-lg grid grid-cols-1 gap-1">
-                        {general.技能.split('\n').map((s: string, i: number) => (
+                        {(general.技能 || '').split('\n').map((s: string, i: number) => (
                           <div key={i} className="text-[10px] font-bold text-on-surface-variant py-1 px-2 bg-surface rounded truncate">
                             {s}
                           </div>
