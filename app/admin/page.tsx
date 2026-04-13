@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { collection, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { Plus, Trash2, Save, X, ChevronDown, ChevronUp, Upload, FileJson } from 'lucide-react';
+import { Plus, Trash2, Save, X, ChevronDown, ChevronUp, Upload } from 'lucide-react';
 
 export default function AdminPanel() {
   const [generals, setGenerals] = useState<any[]>([]);
@@ -18,6 +18,7 @@ export default function AdminPanel() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<any>({});
   const [teamTypeFilter, setTeamTypeFilter] = useState<string>('全部');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -35,9 +36,25 @@ export default function AdminPanel() {
   };
 
   const addItem = async (collectionName: string) => {
-    await addDoc(collection(db, collectionName), newItem);
-    setNewItem({});
-    fetchData();
+    try {
+      const data = { ...newItem };
+      // For teams, ensure config is initialized if not present
+      if (collectionName === 'teams' && !data.config) {
+        data.config = [
+          { 武将: '大营', 技能: '', 兵种: '', 专精: '', 兵书: '', 装备: '', 加点: '', 装属: '' },
+          { 武将: '中军', 技能: '', 兵种: '', 专精: '', 兵书: '', 装备: '', 加点: '', 装属: '' },
+          { 武将: '前锋', 技能: '', 兵种: '', 专精: '', 兵书: '', 装备: '', 加点: '', 装属: '' }
+        ];
+      }
+      await addDoc(collection(db, collectionName), data);
+      setNewItem({});
+      setIsAddModalOpen(false);
+      fetchData();
+      alert('添加成功！');
+    } catch (error) {
+      console.error('Add failed:', error);
+      alert('添加失败');
+    }
   };
 
   const deleteItem = async (collectionName: string, id: string) => {
@@ -122,102 +139,292 @@ export default function AdminPanel() {
     return teams.filter(t => (t.teamType || '未分类') === teamTypeFilter);
   }, [teams, teamTypeFilter]);
 
-  const runMigration = async (type?: 'generals' | 'tactics' | 'teams') => {
-    setIsMigrating(true);
-    setMigrationStatus('开始迁移...');
-    setMigrationProgress(0);
-    try {
-      const { migrateData } = await import('../../migrate');
-      const types: ('generals' | 'tactics' | 'teams')[] = type ? [type] : ['generals', 'tactics', 'teams'];
-      await migrateData((msg, progress) => {
-        setMigrationStatus(msg);
-        setMigrationProgress(progress);
-      }, types);
-      fetchData();
-      alert(`数据迁移完成！(${type || '全部'})`);
-    } catch (error) {
-      console.error('Migration failed:', error);
-      alert('迁移失败，请检查控制台。');
-    } finally {
-      setIsMigrating(false);
-      setMigrationStatus('');
-      setMigrationProgress(0);
-    }
-  };
-
-  const runCleanup = async () => {
-    setIsMigrating(true);
-    setMigrationStatus('正在清理重复项...');
-    setMigrationProgress(0);
-    try {
-      const { cleanupDuplicates } = await import('../../migrate');
-      await cleanupDuplicates((msg, progress) => {
-        setMigrationStatus(msg);
-        setMigrationProgress(progress);
-      });
-      fetchData();
-      alert('重复项清理完成！');
-    } catch (error) {
-      console.error('Cleanup failed:', error);
-      alert('清理失败，请检查控制台。');
-    } finally {
-      setIsMigrating(false);
-      setMigrationStatus('');
-      setMigrationProgress(0);
-    }
-  };
-
   const renderForm = () => {
-    if (activeTab === 'generals') {
-      return (
-        <div className="flex gap-2 mb-4">
-          <input placeholder="名称" className="border p-2 rounded" onChange={e => setNewItem({...newItem, name: e.target.value})} />
-          <input placeholder="赛季" className="border p-2 rounded" onChange={e => setNewItem({...newItem, season: e.target.value})} />
-          <button onClick={() => addItem('generals')} className="bg-primary text-white px-4 py-2 rounded flex items-center gap-2"><Plus size={16} /> 添加</button>
-        </div>
-      );
-    }
-    if (activeTab === 'tactics') {
-      return (
-        <div className="flex flex-wrap gap-2 mb-4">
-          <input placeholder="名称" className="border p-2 rounded" onChange={e => setNewItem({...newItem, name: e.target.value})} />
-          <input placeholder="类型" className="border p-2 rounded" onChange={e => setNewItem({...newItem, type: e.target.value})} />
-          <input placeholder="特性类型" className="border p-2 rounded" onChange={e => setNewItem({...newItem, traitType: e.target.value})} />
-          <input placeholder="适用兵种" className="border p-2 rounded" onChange={e => setNewItem({...newItem, troopType: e.target.value})} />
-          <button onClick={() => addItem('tactics')} className="bg-primary text-white px-4 py-2 rounded flex items-center gap-2"><Plus size={16} /> 添加</button>
-        </div>
-      );
-    }
-    if (activeTab === 'teams') {
-      return (
-        <div className="flex flex-wrap gap-4 mb-4 items-end bg-surface-container-low p-4 rounded-xl border">
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-bold text-outline uppercase">阵容名称</label>
-            <input placeholder="名称" className="border p-2 rounded bg-white" onChange={e => setNewItem({...newItem, name: e.target.value})} />
+    return (
+      <div className="mb-6 flex flex-wrap gap-4 items-center">
+        <button 
+          onClick={() => {
+            setNewItem(activeTab === 'generals' ? {
+              name: '',
+              season: 'S1',
+              faction: '魏',
+              arms: [],
+              force: '',
+              command: '',
+              intelligence: '',
+              speed: '',
+              tactic_name: '',
+              tactic_type: '',
+              tactic_probability: '',
+              tactic_trait: '',
+              tactic_description: '',
+              fate: ''
+            } : activeTab === 'tactics' ? {
+              name: '',
+              type: '指挥',
+              season: 'S1',
+              probability: '',
+              description: '',
+              traitType: '',
+              troopType: ''
+            } : {
+              name: '',
+              badge: '',
+              season: 'S2',
+              teamType: '推荐阵容',
+              desc: '',
+              config: [
+                { 武将: '大营', 技能: '', 兵种: '', 专精: '', 兵书: '', 装备: '', 加点: '', 装属: '' },
+                { 武将: '中军', 技能: '', 兵种: '', 专精: '', 兵书: '', 装备: '', 加点: '', 装属: '' },
+                { 武将: '前锋', 技能: '', 兵种: '', 专精: '', 兵书: '', 装备: '', 加点: '', 装属: '' }
+              ]
+            });
+            setIsAddModalOpen(true);
+          }}
+          className="bg-primary text-white px-6 py-3 rounded-xl flex items-center gap-2 font-bold shadow-lg hover:opacity-90 transition-all"
+        >
+          <Plus size={20} /> 新增{activeTab === 'generals' ? '武将' : activeTab === 'tactics' ? '战法' : '阵容'}
+        </button>
+
+        {activeTab === 'teams' && (
+          <label className="bg-secondary text-white px-6 py-3 rounded-xl flex items-center gap-2 font-bold shadow-lg hover:opacity-90 transition-all cursor-pointer">
+            <Upload size={20} /> 导入阵容 JSON
+            <input type="file" accept=".json" className="hidden" onChange={handleImportJSON} />
+          </label>
+        )}
+
+        {isMigrating && (
+          <div className="min-w-[200px] flex-1 max-w-xs">
+            <div className="flex justify-between mb-1">
+              <span className="text-[10px] font-bold text-primary uppercase">{migrationStatus}</span>
+              <span className="text-[10px] font-bold text-primary">{Math.round(migrationProgress)}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-1.5">
+              <div 
+                className="bg-primary h-1.5 rounded-full transition-all duration-300" 
+                style={{ width: `${migrationProgress}%` }}
+              ></div>
+            </div>
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-bold text-outline uppercase">标签 (Badge)</label>
-            <input placeholder="如: 箕形阵" className="border p-2 rounded bg-white" onChange={e => setNewItem({...newItem, badge: e.target.value})} />
+        )}
+
+        {isAddModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl">
+              <div className="p-6 border-b sticky top-0 bg-white z-10 flex justify-between items-center">
+                <h3 className="text-xl font-bold">新增{activeTab === 'generals' ? '武将' : activeTab === 'tactics' ? '战法' : '阵容'}</h3>
+                <button onClick={() => setIsAddModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-full"><X size={24} /></button>
+              </div>
+              
+              <div className="p-6 space-y-6">
+                {activeTab === 'generals' && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-500 uppercase">武将名称</label>
+                      <input className="w-full border p-2 rounded" value={newItem.name || ''} onChange={e => setNewItem({...newItem, name: e.target.value})} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-500 uppercase">赛季</label>
+                      <input className="w-full border p-2 rounded" value={newItem.season || ''} onChange={e => setNewItem({...newItem, season: e.target.value})} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-500 uppercase">阵营</label>
+                      <select className="w-full border p-2 rounded" value={newItem.faction || '魏'} onChange={e => setNewItem({...newItem, faction: e.target.value})}>
+                        {['魏', '蜀', '吴', '群', '晋'].map(f => <option key={f} value={f}>{f}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-500 uppercase">兵种 (逗号分隔)</label>
+                      <input className="w-full border p-2 rounded" value={Array.isArray(newItem.arms) ? newItem.arms.join(',') : newItem.arms || ''} onChange={e => setNewItem({...newItem, arms: e.target.value.split(',')})} />
+                    </div>
+                    {['force', 'intelligence', 'command', 'speed'].map(stat => (
+                      <div key={stat} className="space-y-1">
+                        <label className="text-xs font-bold text-gray-500 uppercase">{stat === 'force' ? '武力' : stat === 'intelligence' ? '智力' : stat === 'command' ? '统帅' : '先攻'}</label>
+                        <input className="w-full border p-2 rounded" value={newItem[stat] || ''} onChange={e => setNewItem({...newItem, [stat]: e.target.value})} />
+                      </div>
+                    ))}
+                    <div className="col-span-full border-t pt-4 mt-2">
+                      <h4 className="font-bold mb-3 text-primary">自带战法信息</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-gray-500 uppercase">战法名称</label>
+                          <input className="w-full border p-2 rounded" value={newItem.tactic_name || ''} onChange={e => setNewItem({...newItem, tactic_name: e.target.value})} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-gray-500 uppercase">战法类型</label>
+                          <input className="w-full border p-2 rounded" value={newItem.tactic_type || ''} onChange={e => setNewItem({...newItem, tactic_type: e.target.value})} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-gray-500 uppercase">发动概率</label>
+                          <input className="w-full border p-2 rounded" value={newItem.tactic_probability || ''} onChange={e => setNewItem({...newItem, tactic_probability: e.target.value})} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-gray-500 uppercase">战法特性</label>
+                          <input className="w-full border p-2 rounded" value={newItem.tactic_trait || ''} onChange={e => setNewItem({...newItem, tactic_trait: e.target.value})} />
+                        </div>
+                        <div className="col-span-full space-y-1">
+                          <label className="text-xs font-bold text-gray-500 uppercase">战法说明</label>
+                          <textarea className="w-full border p-2 rounded h-24" value={newItem.tactic_description || ''} onChange={e => setNewItem({...newItem, tactic_description: e.target.value})} />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="col-span-full space-y-1">
+                      <label className="text-xs font-bold text-gray-500 uppercase">缘分 (格式: 名称|描述|武将1/武将2)</label>
+                      <textarea className="w-full border p-2 rounded h-20" value={newItem.fate || ''} onChange={e => setNewItem({...newItem, fate: e.target.value})} />
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'tactics' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-500 uppercase">战法名称</label>
+                      <input className="w-full border p-2 rounded" value={newItem.name || ''} onChange={e => setNewItem({...newItem, name: e.target.value})} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-500 uppercase">类型</label>
+                      <select className="w-full border p-2 rounded" value={newItem.type || '指挥'} onChange={e => setNewItem({...newItem, type: e.target.value})}>
+                        {['指挥', '主动', '被动', '追击', '阵法', '兵种'].map(t => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-500 uppercase">赛季</label>
+                      <input className="w-full border p-2 rounded" value={newItem.season || ''} onChange={e => setNewItem({...newItem, season: e.target.value})} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-500 uppercase">发动概率</label>
+                      <input className="w-full border p-2 rounded" value={newItem.probability || ''} onChange={e => setNewItem({...newItem, probability: e.target.value})} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-500 uppercase">特性类型</label>
+                      <input className="w-full border p-2 rounded" value={newItem.traitType || ''} onChange={e => setNewItem({...newItem, traitType: e.target.value})} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-500 uppercase">适用兵种</label>
+                      <input className="w-full border p-2 rounded" value={newItem.troopType || ''} onChange={e => setNewItem({...newItem, troopType: e.target.value})} />
+                    </div>
+                    <div className="col-span-full space-y-1">
+                      <label className="text-xs font-bold text-gray-500 uppercase">战法说明</label>
+                      <textarea className="w-full border p-2 rounded h-32" value={newItem.description || ''} onChange={e => setNewItem({...newItem, description: e.target.value})} />
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'teams' && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-500 uppercase">阵容名称</label>
+                        <input className="w-full border p-2 rounded" value={newItem.name || ''} onChange={e => setNewItem({...newItem, name: e.target.value})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-500 uppercase">标签 (Badge)</label>
+                        <input className="w-full border p-2 rounded" value={newItem.badge || ''} onChange={e => setNewItem({...newItem, badge: e.target.value})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-500 uppercase">赛季</label>
+                        <input className="w-full border p-2 rounded" value={newItem.season || ''} onChange={e => setNewItem({...newItem, season: e.target.value})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-500 uppercase">阵容分类</label>
+                        <input className="w-full border p-2 rounded" value={newItem.teamType || ''} onChange={e => setNewItem({...newItem, teamType: e.target.value})} />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-500 uppercase">阵容评价</label>
+                      <textarea className="w-full border p-2 rounded h-20" value={newItem.desc || ''} onChange={e => setNewItem({...newItem, desc: e.target.value})} />
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <h4 className="font-bold text-primary border-b pb-2">武将配置</h4>
+                      {newItem.config?.map((c: any, i: number) => (
+                        <div key={i} className="bg-gray-50 p-4 rounded-xl border space-y-3">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-gray-400 uppercase">位置</label>
+                              <input className="w-full border p-1.5 rounded bg-white text-sm" value={c.武将 || ''} onChange={e => {
+                                const newConfig = [...newItem.config];
+                                newConfig[i].武将 = e.target.value;
+                                setNewItem({...newItem, config: newConfig});
+                              }} />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-gray-400 uppercase">兵种</label>
+                              <input className="w-full border p-1.5 rounded bg-white text-sm" value={c.兵种 || ''} onChange={e => {
+                                const newConfig = [...newItem.config];
+                                newConfig[i].兵种 = e.target.value;
+                                setNewItem({...newItem, config: newConfig});
+                              }} />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-gray-400 uppercase">专精</label>
+                              <input className="w-full border p-1.5 rounded bg-white text-sm" value={c.专精 || ''} onChange={e => {
+                                const newConfig = [...newItem.config];
+                                newConfig[i].专精 = e.target.value;
+                                setNewItem({...newItem, config: newConfig});
+                              }} />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-gray-400 uppercase">加点</label>
+                              <input className="w-full border p-1.5 rounded bg-white text-sm" value={c.加点 || ''} onChange={e => {
+                                const newConfig = [...newItem.config];
+                                newConfig[i].加点 = e.target.value;
+                                setNewItem({...newItem, config: newConfig});
+                              }} />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-gray-400 uppercase">技能 (换行分隔)</label>
+                              <textarea className="w-full border p-1.5 rounded bg-white text-sm h-16" value={c.技能 || ''} onChange={e => {
+                                const newConfig = [...newItem.config];
+                                newConfig[i].技能 = e.target.value;
+                                setNewItem({...newItem, config: newConfig});
+                              }} />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-gray-400 uppercase">兵书 (换行分隔)</label>
+                              <textarea className="w-full border p-1.5 rounded bg-white text-sm h-16" value={c.兵书 || ''} onChange={e => {
+                                const newConfig = [...newItem.config];
+                                newConfig[i].兵书 = e.target.value;
+                                setNewItem({...newItem, config: newConfig});
+                              }} />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-gray-400 uppercase">装备</label>
+                              <input className="w-full border p-1.5 rounded bg-white text-sm" value={c.装备 || ''} onChange={e => {
+                                const newConfig = [...newItem.config];
+                                newConfig[i].装备 = e.target.value;
+                                setNewItem({...newItem, config: newConfig});
+                              }} />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-gray-400 uppercase">装属</label>
+                              <input className="w-full border p-1.5 rounded bg-white text-sm" value={c.装属 || ''} onChange={e => {
+                                const newConfig = [...newItem.config];
+                                newConfig[i].装属 = e.target.value;
+                                setNewItem({...newItem, config: newConfig});
+                              }} />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-6 border-t bg-gray-50 flex justify-end gap-3 sticky bottom-0">
+                <button onClick={() => setIsAddModalOpen(false)} className="px-6 py-2 rounded-lg font-bold text-gray-600 hover:bg-gray-200">取消</button>
+                <button onClick={() => addItem(activeTab)} className="px-8 py-2 rounded-lg font-bold bg-primary text-white hover:opacity-90">完成添加</button>
+              </div>
+            </div>
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-bold text-outline uppercase">赛季</label>
-            <input placeholder="如: S2" className="border p-2 rounded bg-white" onChange={e => setNewItem({...newItem, season: e.target.value})} />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-bold text-outline uppercase">阵容分类</label>
-            <input placeholder="如: S2推荐阵容" className="border p-2 rounded bg-white" onChange={e => setNewItem({...newItem, teamType: e.target.value})} />
-          </div>
-          <div className="flex gap-2">
-            <button onClick={() => addItem('teams')} className="bg-primary text-white px-4 py-2 rounded flex items-center gap-2 font-bold"><Plus size={16} /> 添加</button>
-            <label className="bg-secondary text-white px-4 py-2 rounded flex items-center gap-2 font-bold cursor-pointer hover:opacity-90">
-              <Upload size={16} /> 导入JSON
-              <input type="file" accept=".json" className="hidden" onChange={handleImportJSON} />
-            </label>
-          </div>
-        </div>
-      );
-    }
-    return null;
+        )}
+      </div>
+    );
   };
 
   return (
@@ -242,61 +449,6 @@ export default function AdminPanel() {
       </div>
 
       {renderForm()}
-
-      <div className="mb-4 flex flex-col gap-4">
-        <div className="flex flex-wrap gap-4 items-center">
-          <button 
-            onClick={() => runMigration()} 
-            disabled={isMigrating}
-            className={`px-4 py-2 rounded font-bold ${isMigrating ? 'bg-gray-400 cursor-not-allowed' : 'bg-secondary text-white hover:opacity-90'}`}
-          >
-            {isMigrating ? '正在处理中...' : '全量迁移'}
-          </button>
-          <button 
-            onClick={() => runMigration('generals')} 
-            disabled={isMigrating}
-            className={`px-4 py-2 rounded font-bold ${isMigrating ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 text-white hover:opacity-90'}`}
-          >
-            迁移武将
-          </button>
-          <button 
-            onClick={() => runMigration('tactics')} 
-            disabled={isMigrating}
-            className={`px-4 py-2 rounded font-bold ${isMigrating ? 'bg-gray-400 cursor-not-allowed' : 'bg-purple-500 text-white hover:opacity-90'}`}
-          >
-            迁移战法
-          </button>
-          <button 
-            onClick={() => runMigration('teams')} 
-            disabled={isMigrating}
-            className={`px-4 py-2 rounded font-bold ${isMigrating ? 'bg-gray-400 cursor-not-allowed' : 'bg-orange-500 text-white hover:opacity-90'}`}
-          >
-            迁移阵容
-          </button>
-          <button 
-            onClick={runCleanup} 
-            disabled={isMigrating}
-            className={`px-4 py-2 rounded font-bold ${isMigrating ? 'bg-gray-400 cursor-not-allowed' : 'bg-tertiary text-white hover:opacity-90'}`}
-          >
-            清理重复数据
-          </button>
-        </div>
-        
-        {isMigrating && (
-          <div className="w-full max-w-md">
-            <div className="flex justify-between mb-1">
-              <span className="text-sm font-medium text-primary">{migrationStatus}</span>
-              <span className="text-sm font-medium text-primary">{Math.round(migrationProgress)}%</span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2.5">
-              <div 
-                className="bg-primary h-2.5 rounded-full transition-all duration-300" 
-                style={{ width: `${migrationProgress}%` }}
-              ></div>
-            </div>
-          </div>
-        )}
-      </div>
 
       <div className="bg-surface p-4 rounded-xl shadow-sm border">
         <div className="flex justify-between items-center mb-4">

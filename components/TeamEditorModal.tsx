@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { X, Save, Plus, Trash2, Search, User, Book, Shield, Zap, Swords, Clock, BarChart2 } from 'lucide-react';
-import { wujiangData } from '@/lib/wujiang_data';
-import { zhanfaData } from '@/lib/zhanfa_data';
 import SelectionModal from './SelectionModal';
 
 interface TeamConfig {
@@ -50,7 +48,7 @@ const emptyHero: TeamConfig = {
   加点: ""
 };
 
-export default function TeamEditorModal({ isOpen, onClose, onSave, initialData, allGenerals = wujiangData, allTactics = zhanfaData }: TeamEditorModalProps) {
+export default function TeamEditorModal({ isOpen, onClose, onSave, initialData, allGenerals = [], allTactics = [] }: TeamEditorModalProps) {
   const [team, setTeam] = useState<Team>(() => {
     if (initialData) return { ...initialData };
     return {

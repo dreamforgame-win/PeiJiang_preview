@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from 'react';
-import { wujiangData } from '@/lib/wujiang_data';
-import { zhanfaData } from '@/lib/zhanfa_data';
 import { Search, Download, Upload } from 'lucide-react';
 
 interface WarehouseProps {
@@ -29,20 +27,20 @@ export default function Warehouse({
   onExport,
   onImport,
   onQuickImport,
-  allGenerals = wujiangData,
-  allTactics = zhanfaData
+  allGenerals = [],
+  allTactics = []
 }: WarehouseProps) {
   const [activeTab, setActiveTab] = useState<'generals' | 'tactics'>('generals');
   const [searchQuery, setSearchQuery] = useState('');
 
   const generals = allGenerals.filter(w => 
     (collectedGenerals || []).includes(w.name) && 
-    w.name.toLowerCase().includes(searchQuery.toLowerCase())
+    (w.name || '').toLowerCase().includes((searchQuery || '').toLowerCase())
   );
   
   const tactics = allTactics.filter(z => 
     (collectedTactics || []).includes(z.name) && 
-    (z.name.toLowerCase().includes(searchQuery.toLowerCase()) || z.description.toLowerCase().includes(searchQuery.toLowerCase()))
+    ((z.name || '').toLowerCase().includes((searchQuery || '').toLowerCase()) || (z.description || '').toLowerCase().includes((searchQuery || '').toLowerCase()))
   );
 
   return (

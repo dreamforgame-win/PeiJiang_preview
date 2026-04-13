@@ -7,11 +7,13 @@ interface MockBattleProps {
   allGenerals: any[];
   allTactics: any[];
   allTeams: any[];
+  onGeneralClick?: (name: string) => void;
+  onTacticClick?: (name: string) => void;
 }
 
 type SlotItem = { type: 'general' | 'tactic'; data: any };
 
-export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBattleProps) {
+export default function MockBattle({ allGenerals, allTactics, allTeams, onGeneralClick, onTacticClick }: MockBattleProps) {
   const [manuallyAddedGenerals, setManuallyAddedGenerals] = useState<any[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('mockBattleManuallyAddedGenerals');
@@ -229,6 +231,14 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
   const [searchQuery, setSearchQuery] = useState('');
   const [tempSelectedItems, setTempSelectedItems] = useState<any[]>([]);
 
+  const teamTypes = useMemo(() => {
+    const types = new Set(normalizedTeams.map(t => t.teamType).filter(Boolean));
+    return ['全部', ...Array.from(types)];
+  }, [normalizedTeams]);
+
+  const [recommendationTab, setRecommendationTab] = useState('全部');
+  const [simulationTab, setSimulationTab] = useState('全部');
+
   const handleOpenModal = (dest: 'warehouse_general' | 'warehouse_tactic' | 'slot', roundIndex?: number, groupIndex?: number, slotIndex?: number) => {
     setModalTarget({ dest, roundIndex, groupIndex, slotIndex });
     if (dest === 'warehouse_general') setModalTab('general');
@@ -296,13 +306,13 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
   const filteredGenerals = allGenerals.filter(g => {
     if (!searchQuery) return true;
     const queries = searchQuery.split(/[\s,，]+/).filter(Boolean);
-    return queries.some(q => g.name.toLowerCase().includes(q.toLowerCase()));
+    return queries.some(q => (g.name || '').toLowerCase().includes((q || '').toLowerCase()));
   });
 
   const filteredTactics = allTactics.filter(t => {
     if (!searchQuery) return true;
     const queries = searchQuery.split(/[\s,，]+/).filter(Boolean);
-    return queries.some(q => t.name.toLowerCase().includes(q.toLowerCase()));
+    return queries.some(q => (t.name || '').toLowerCase().includes((q || '').toLowerCase()));
   });
 
   return (
@@ -609,16 +619,37 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
               );
             })
           ) : (
-            <div className="grid grid-cols-2 gap-4">
-              {normalizedTeams
-                .map(team => ({ team, score: calculateMatchScore(team) }))
-                .filter(item => item.score > 0)
-                .sort((a, b) => b.score - a.score)
-                .map(({ team, score }, idx) => (
+            <div className="flex flex-col gap-4">
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                {teamTypes.map(type => (
+                  <button
+                    key={type}
+                    onClick={() => setRecommendationTab(type)}
+                    className={`px-4 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap transition-all ${
+                      recommendationTab === type
+                        ? 'bg-primary text-white shadow-sm'
+                        : 'bg-surface-container-highest text-outline hover:text-on-surface'
+                    }`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {normalizedTeams
+                  .filter(team => recommendationTab === '全部' || team.teamType === recommendationTab)
+                  .map(team => ({ team, score: calculateMatchScore(team) }))
+                  .sort((a, b) => b.score - a.score)
+                  .map(({ team, score }, idx) => (
                   <div key={idx} className="bg-surface-container-lowest border border-outline-variant/20 rounded-xl p-4 shadow-sm">
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-2">
-                        <h4 className="font-bold text-sm text-gray-900">{team.name}</h4>
+                        <h4 className="font-bold text-sm text-gray-900">
+                          {(team.season || team.赛季) && (
+                            <span className="mr-1 text-primary">[{team.season || team.赛季}]</span>
+                          )}
+                          {team.name}
+                        </h4>
                         {team.badge && (
                           <span className="inline-block px-2 py-0.5 bg-surface-container-high text-outline text-[10px] font-bold rounded-sm">
                             {team.badge}
@@ -634,12 +665,21 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
                         const hasGeneral = warehouseGenerals.some(g => g.name === gen.name);
                         return (
                           <div key={gIdx} className="text-xs flex items-center gap-2">
-                            <span className={`font-bold ${hasGeneral ? 'text-green-600' : 'text-gray-700'}`}>{gen.name}</span>
-                            <div className="flex flex-wrap gap-1">
+                            <span 
+                              onClick={() => onGeneralClick?.(gen.name)}
+                              className={`font-bold cursor-pointer hover:underline ${hasGeneral ? 'text-green-600' : 'text-gray-700'}`}
+                            >
+                              {gen.name}
+                            </span>
+                            <div className="flex flex-wrap gap-1 flex-1">
                               {gen.tactics.map((tac: string, tIdx: number) => {
                                 const hasTactic = warehouseTactics.some(t => t.name === tac);
                                 return (
-                                  <span key={tIdx} className={`px-1.5 py-0.5 rounded text-[10px] ${hasTactic ? 'bg-green-100 text-green-700' : 'bg-surface-container-highest text-gray-500'}`}>
+                                  <span 
+                                    key={tIdx} 
+                                    onClick={() => onTacticClick?.(tac)}
+                                    className={`px-1.5 py-0.5 rounded text-[10px] cursor-pointer hover:brightness-95 ${hasTactic ? 'bg-green-100 text-green-700' : 'bg-surface-container-highest text-gray-500'}`}
+                                  >
                                     {tac}
                                   </span>
                                 );
@@ -651,6 +691,7 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
                     </div>
                   </div>
                 ))}
+              </div>
             </div>
           )}
         </div>
@@ -659,10 +700,27 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
         {viewMode === 'rounds' && simulationItem && (
           <div className="mt-6 pt-6 border-t border-outline-variant/20">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg flex items-center gap-2 text-gray-900">
-                <Search className="w-5 h-5 text-primary" />
-                关联阵容: {simulationItem.data.name}
-              </h3>
+              <div className="flex flex-col gap-2">
+                <h3 className="font-bold text-lg flex items-center gap-2 text-gray-900">
+                  <Search className="w-5 h-5 text-primary" />
+                  关联阵容: {simulationItem.data.name}
+                </h3>
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                  {teamTypes.map(type => (
+                    <button
+                      key={type}
+                      onClick={() => setSimulationTab(type)}
+                      className={`px-3 py-1 rounded-full font-bold text-[10px] whitespace-nowrap transition-all ${
+                        simulationTab === type
+                          ? 'bg-primary text-white shadow-sm'
+                          : 'bg-surface-container-highest text-outline hover:text-on-surface'
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <button 
                 onClick={() => setSimulationItem(null)}
                 className="text-xs text-gray-500 hover:text-primary font-medium"
@@ -673,11 +731,12 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
             
             {(() => {
               const matchingTeams = normalizedTeams.filter(team => {
-                if (simulationItem.type === 'general') {
-                  return (team.generals || []).some((g: any) => g.name === simulationItem.data.name);
-                } else {
-                  return (team.generals || []).some((g: any) => (g.tactics || []).includes(simulationItem.data.name));
-                }
+                const matchesSearch = simulationItem.type === 'general' 
+                  ? (team.generals || []).some((g: any) => g.name === simulationItem.data.name)
+                  : (team.generals || []).some((g: any) => (g.tactics || []).includes(simulationItem.data.name));
+                
+                const matchesTab = simulationTab === '全部' || team.teamType === simulationTab;
+                return matchesSearch && matchesTab;
               });
 
               if (matchingTeams.length === 0) {
@@ -689,7 +748,7 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
               }
 
               return (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[33vh] overflow-y-auto pr-2 scrollbar-hide">
                   {matchingTeams.map((team, idx) => {
                     const score = calculateMatchScore(team, simulationItem);
                     // Only filter out if score is 0 AND it's not the simulation item itself
@@ -722,7 +781,12 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
                       <div key={idx} className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
                         <div className="flex justify-between items-start mb-3">
                           <div className="flex items-center gap-2">
-                            <h4 className="font-bold text-gray-900">{team.name}</h4>
+                            <h4 className="font-bold text-gray-900">
+                              {(team.season || team.赛季) && (
+                                <span className="mr-1 text-primary text-xs">[{team.season || team.赛季}]</span>
+                              )}
+                              {team.name}
+                            </h4>
                             {team.badge && (
                               <span className="inline-block px-2 py-0.5 bg-surface-container-high text-outline text-[10px] font-bold rounded-sm">
                                 {team.badge}
@@ -736,14 +800,18 @@ export default function MockBattle({ allGenerals, allTactics, allTeams }: MockBa
                         <div className="space-y-2">
                           {team.generals.map((gen: any, gIdx: number) => (
                             <div key={gIdx} className="text-xs flex items-center gap-2">
-                              <span className={`font-bold whitespace-nowrap ${(warehouseGeneralNames || []).includes(gen.name) ? 'text-green-600' : 'text-gray-700'}`}>
+                              <span 
+                                onClick={() => onGeneralClick?.(gen.name)}
+                                className={`font-bold whitespace-nowrap cursor-pointer hover:underline ${(warehouseGeneralNames || []).includes(gen.name) ? 'text-green-600' : 'text-gray-700'}`}
+                              >
                                 {gen.name}
                               </span>
-                              <div className="flex flex-wrap gap-1 overflow-x-auto whitespace-nowrap max-w-[200px] scrollbar-hide">
+                              <div className="flex flex-wrap gap-1 flex-1">
                                 {gen.tactics.map((tac: string, tIdx: number) => (
                                   <span 
                                     key={tIdx} 
-                                    className={`px-1.5 py-0.5 rounded bg-surface-container-highest border border-outline-variant/20 ${(warehouseTacticNames || []).includes(tac) ? 'text-green-600 font-bold' : 'text-gray-500'}`}
+                                    onClick={() => onTacticClick?.(tac)}
+                                    className={`px-1.5 py-0.5 rounded bg-surface-container-highest border border-outline-variant/20 cursor-pointer hover:brightness-95 ${(warehouseTacticNames || []).includes(tac) ? 'text-green-600 font-bold' : 'text-gray-500'}`}
                                   >
                                     {tac}
                                   </span>
