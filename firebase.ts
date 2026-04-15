@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, getDocFromServer, doc } from 'firebase/firestore';
 
 // Initialize Firebase SDK
 const firebaseConfig = {
@@ -21,9 +21,30 @@ try {
   if (firebaseConfig.apiKey) {
     app = initializeApp(firebaseConfig);
     const dbId = process.env.NEXT_PUBLIC_FIREBASE_FIRESTORE_DATABASE_ID;
-    dbInstance = dbId && dbId !== '(default)' ? getFirestore(app, dbId) : getFirestore(app);
+    
+    // Use initializeFirestore to enable experimentalForceLongPolling for better stability in some networks
+    dbInstance = initializeFirestore(app, {
+      experimentalForceLongPolling: true,
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+    }, dbId && dbId !== '(default)' ? dbId : undefined);
+
     authInstance = getAuth(app);
-    console.log("Firebase initialized successfully");
+    console.log("Firebase initialized successfully with long polling");
+
+    // Connection test
+    const testConnection = async () => {
+      try {
+        await getDocFromServer(doc(dbInstance, 'test', 'connection'));
+        console.log("Firestore connection test successful");
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('the client is offline')) {
+          console.error("Firestore connection failed: The client is offline. Please check your Firebase configuration and network.");
+        } else {
+          console.warn("Firestore connection test warning (expected if 'test/connection' doc doesn't exist):", error);
+        }
+      }
+    };
+    testConnection();
   } else {
     console.warn("Firebase API Key is missing. Database connection will be disabled.");
   }

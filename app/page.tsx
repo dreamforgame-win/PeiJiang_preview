@@ -8,9 +8,10 @@ import {
   Shield, Zap, Book, Clock, BarChart2, Edit, ChevronRight, ChevronDown, Download,
   CheckCircle, AlertCircle, LogIn, LogOut, Sparkles
 } from 'lucide-react';
-import { collection, onSnapshot, query, orderBy, doc, setDoc, getDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, setDoc, getDoc, getDocs } from 'firebase/firestore';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { db, auth, isFirebaseInitialized } from '@/firebase';
+import { handleFirestoreError, OperationType } from '@/lib/firestore-utils';
 import GeneralGallery from '@/components/GeneralGallery';
 import ZhanfaLibrary from '@/components/ZhanfaLibrary';
 import Warehouse from '@/components/Warehouse';
@@ -86,6 +87,7 @@ export default function Page() {
   const [isTacticQuickEntryOpen, setIsTacticQuickEntryOpen] = useState(false);
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [isProxyMode, setIsProxyMode] = useState(false);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -198,24 +200,67 @@ export default function Page() {
         unsubscribeAuth();
       };
     }
+
+    // Try to fetch data via Server Proxy first (for stability in restricted networks)
+    const fetchViaProxy = async () => {
+      try {
+        const res = await fetch('/api/data');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.generals) setDbGenerals(data.generals);
+          if (data.tactics) setDbTactics(data.tactics);
+          if (data.teams) setDbTeams(data.teams);
+          if (data.buffs) setDbBuffs(data.buffs);
+          if (data.special_effects) setDbSpecialEffects(data.special_effects);
+          setIsProxyMode(true);
+          console.log("Data loaded via Server Proxy (China-friendly mode)");
+        }
+      } catch (err) {
+        console.error("Proxy fetch failed:", err);
+      }
+    };
+
+    fetchViaProxy();
+
+    // Still try to set up onSnapshot, but handle errors gracefully
     const unsubscribeGenerals = onSnapshot(collection(db, 'generals'), (snapshot) => {
       setDbGenerals(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+      setIsProxyMode(false); // If snapshot works, we are not in proxy mode
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'generals');
+      setIsProxyMode(true);
     });
 
     const unsubscribeTactics = onSnapshot(collection(db, 'tactics'), (snapshot) => {
       setDbTactics(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+      setIsProxyMode(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'tactics');
+      setIsProxyMode(true);
     });
 
     const unsubscribeTeams = onSnapshot(collection(db, 'teams'), (snapshot) => {
       setDbTeams(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+      setIsProxyMode(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'teams');
+      setIsProxyMode(true);
     });
 
     const unsubscribeBuffs = onSnapshot(collection(db, 'buffs'), (snapshot) => {
       setDbBuffs(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+      setIsProxyMode(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'buffs');
+      setIsProxyMode(true);
     });
 
     const unsubscribeSpecialEffects = onSnapshot(collection(db, 'special_effects'), (snapshot) => {
       setDbSpecialEffects(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+      setIsProxyMode(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'special_effects');
+      setIsProxyMode(true);
     });
 
     return () => {
@@ -232,41 +277,82 @@ export default function Page() {
   useEffect(() => {
     if (user && mounted && isFirebaseInitialized) {
       const syncWarehouse = async () => {
-        const userDoc = doc(db, 'users', user.uid);
-        const docSnap = await getDoc(userDoc);
-        
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          if (data.collectedGenerals) setCollectedGenerals(data.collectedGenerals);
-          if (data.collectedTactics) setCollectedTactics(data.collectedTactics);
-        } else {
-          // Initialize user doc
-          await setDoc(userDoc, {
-            email: user.email,
-            collectedGenerals: [],
-            collectedTactics: [],
-            updatedAt: new Date()
-          });
+        const path = `users/${user.uid}`;
+        try {
+          // If in proxy mode, use API route
+          if (isProxyMode) {
+            const res = await fetch('/api/user/warehouse', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ uid: user.uid, email: user.email, action: 'get' })
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data.collectedGenerals) setCollectedGenerals(data.collectedGenerals);
+              if (data.collectedTactics) setCollectedTactics(data.collectedTactics);
+              return;
+            }
+          }
+
+          const userDoc = doc(db, 'users', user.uid);
+          const docSnap = await getDoc(userDoc);
+          
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data.collectedGenerals) setCollectedGenerals(data.collectedGenerals);
+            if (data.collectedTactics) setCollectedTactics(data.collectedTactics);
+          } else {
+            // Initialize user doc
+            await setDoc(userDoc, {
+              email: user.email,
+              collectedGenerals: [],
+              collectedTactics: [],
+              updatedAt: new Date()
+            });
+          }
+        } catch (error) {
+          handleFirestoreError(error, OperationType.GET, path);
+          // Fallback to proxy if direct fails
+          if (!isProxyMode) setIsProxyMode(true);
         }
       };
       syncWarehouse();
     }
-  }, [user, mounted, setCollectedGenerals, setCollectedTactics]);
+  }, [user, mounted, setCollectedGenerals, setCollectedTactics, isProxyMode]);
 
   // Save Warehouse changes to Firestore
   useEffect(() => {
     if (user && mounted && isFirebaseInitialized) {
       const saveWarehouse = async () => {
-        const userDoc = doc(db, 'users', user.uid);
-        await setDoc(userDoc, {
-          collectedGenerals,
-          collectedTactics,
-          updatedAt: new Date()
-        }, { merge: true });
+        const path = `users/${user.uid}`;
+        try {
+          if (isProxyMode) {
+            await fetch('/api/user/warehouse', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                uid: user.uid, 
+                action: 'save', 
+                data: { collectedGenerals, collectedTactics } 
+              })
+            });
+            return;
+          }
+
+          const userDoc = doc(db, 'users', user.uid);
+          await setDoc(userDoc, {
+            collectedGenerals,
+            collectedTactics,
+            updatedAt: new Date()
+          }, { merge: true });
+        } catch (error) {
+          handleFirestoreError(error, OperationType.WRITE, path);
+          if (!isProxyMode) setIsProxyMode(true);
+        }
       };
       saveWarehouse();
     }
-  }, [collectedGenerals, collectedTactics, user, mounted]);
+  }, [collectedGenerals, collectedTactics, user, mounted, isProxyMode]);
 
   const handleLogin = async () => {
     if (!auth) {
@@ -665,6 +751,12 @@ export default function Page() {
             </div>
           )}
           <div className="flex items-center gap-4 flex-nowrap">
+            {isProxyMode && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg border border-amber-200 animate-pulse">
+                <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                <span className="text-xs font-bold">代理模式</span>
+              </div>
+            )}
             {process.env.NODE_ENV === 'development' && (
               <button 
                 onClick={() => {

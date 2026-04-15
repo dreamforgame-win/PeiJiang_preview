@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { collection, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Plus, Trash2, Save, X, ChevronDown, ChevronUp, Upload } from 'lucide-react';
+import { handleFirestoreError, OperationType } from '@/lib/firestore-utils';
 
 export default function AdminPanel() {
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -34,20 +35,36 @@ export default function AdminPanel() {
   }, []);
 
   const fetchData = async () => {
-    const generalsSnap = await getDocs(collection(db, 'generals'));
-    setGenerals(generalsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+    try {
+      // Try proxy first for stability
+      const res = await fetch('/api/data');
+      if (res.ok) {
+        const data = await res.json();
+        setGenerals(data.generals || []);
+        setTactics(data.tactics || []);
+        setTeams(data.teams || []);
+        setBuffs(data.buffs || []);
+        setSpecialEffects(data.special_effects || []);
+        return;
+      }
 
-    const tacticsSnap = await getDocs(collection(db, 'tactics'));
-    setTactics(tacticsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+      const generalsSnap = await getDocs(collection(db, 'generals'));
+      setGenerals(generalsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
 
-    const teamsSnap = await getDocs(collection(db, 'teams'));
-    setTeams(teamsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+      const tacticsSnap = await getDocs(collection(db, 'tactics'));
+      setTactics(tacticsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
 
-    const buffsSnap = await getDocs(collection(db, 'buffs'));
-    setBuffs(buffsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+      const teamsSnap = await getDocs(collection(db, 'teams'));
+      setTeams(teamsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
 
-    const effectsSnap = await getDocs(collection(db, 'special_effects'));
-    setSpecialEffects(effectsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+      const buffsSnap = await getDocs(collection(db, 'buffs'));
+      setBuffs(buffsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+
+      const effectsSnap = await getDocs(collection(db, 'special_effects'));
+      setSpecialEffects(effectsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, 'all_collections');
+    }
   };
 
   const addItem = async (collectionName: string) => {
@@ -61,32 +78,60 @@ export default function AdminPanel() {
           { 武将: '前锋', 技能: '', 兵种: '', 专精: '', 兵书: '', 装备: '', 加点: '', 装属: '' }
         ];
       }
-      await addDoc(collection(db, collectionName), data);
+      
+      // Use proxy
+      const res = await fetch('/api/admin/proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'add', collectionName, data })
+      });
+
+      if (!res.ok) throw new Error('Proxy add failed');
+
       setNewItem({});
       setIsAddModalOpen(false);
       fetchData();
       alert('添加成功！');
     } catch (error) {
-      console.error('Add failed:', error);
+      handleFirestoreError(error, OperationType.CREATE, collectionName);
       alert('添加失败');
     }
   };
 
   const deleteItem = async (collectionName: string, id: string) => {
     if (!confirm('确定要删除吗？')) return;
-    await deleteDoc(doc(db, collectionName, id));
-    fetchData();
+    try {
+      const res = await fetch('/api/admin/proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', collectionName, id })
+      });
+      if (!res.ok) throw new Error('Proxy delete failed');
+      fetchData();
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `${collectionName}/${id}`);
+    }
   };
 
   const updateItem = async (collectionName: string, id: string) => {
-    const { updateDoc, doc: firestoreDoc } = await import('firebase/firestore');
     const dataToUpdate = { ...editData };
     delete dataToUpdate.id; // Don't save the ID inside the document
-    await updateDoc(firestoreDoc(db, collectionName, id), dataToUpdate);
-    setEditingId(null);
-    setEditData({});
-    fetchData();
-    alert('修改成功！');
+    try {
+      const res = await fetch('/api/admin/proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update', collectionName, id, data: dataToUpdate })
+      });
+      if (!res.ok) throw new Error('Proxy update failed');
+      
+      setEditingId(null);
+      setEditData({});
+      fetchData();
+      alert('修改成功！');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `${collectionName}/${id}`);
+      alert('修改失败');
+    }
   };
 
   const handleImportJSON = async (e: React.ChangeEvent<HTMLInputElement>) => {
