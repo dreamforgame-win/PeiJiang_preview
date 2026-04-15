@@ -88,6 +88,12 @@ export default function Page() {
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isProxyMode, setIsProxyMode] = useState(false);
+  const isProxyModeRef = useRef(false);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    isProxyModeRef.current = isProxyMode;
+  }, [isProxyMode]);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -162,7 +168,7 @@ export default function Page() {
         tactic_description: w.tactic_description
       }))
     ];
-  }, [dbGenerals, customGenerals, allTactics]);
+  }, [dbGenerals, customGenerals]);
 
   const handleQuickEntry = async (type: 'general' | 'tactic', data: any) => {
     try {
@@ -213,7 +219,7 @@ export default function Page() {
           if (data.buffs) setDbBuffs(data.buffs);
           if (data.special_effects) setDbSpecialEffects(data.special_effects);
           
-          if (!isProxyMode) {
+          if (!isProxyModeRef.current) {
             setIsProxyMode(true);
             console.log("Data loaded via Server Proxy (China-friendly mode)");
           }
@@ -227,7 +233,7 @@ export default function Page() {
 
     // Set up polling for proxy mode (every 60 seconds)
     const proxyInterval = setInterval(() => {
-      if (isProxyMode) {
+      if (isProxyModeRef.current) {
         fetchViaProxy();
       }
     }, 60000);
@@ -237,7 +243,7 @@ export default function Page() {
       setDbGenerals(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
       setIsProxyMode(false); 
     }, (error) => {
-      if (!isProxyMode) handleFirestoreError(error, OperationType.GET, 'generals');
+      if (!isProxyModeRef.current) handleFirestoreError(error, OperationType.GET, 'generals');
       setIsProxyMode(true);
     });
 
@@ -245,7 +251,7 @@ export default function Page() {
       setDbTactics(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
       setIsProxyMode(false);
     }, (error) => {
-      if (!isProxyMode) handleFirestoreError(error, OperationType.GET, 'tactics');
+      if (!isProxyModeRef.current) handleFirestoreError(error, OperationType.GET, 'tactics');
       setIsProxyMode(true);
     });
 
@@ -253,7 +259,7 @@ export default function Page() {
       setDbTeams(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
       setIsProxyMode(false);
     }, (error) => {
-      if (!isProxyMode) handleFirestoreError(error, OperationType.GET, 'teams');
+      if (!isProxyModeRef.current) handleFirestoreError(error, OperationType.GET, 'teams');
       setIsProxyMode(true);
     });
 
@@ -261,7 +267,7 @@ export default function Page() {
       setDbBuffs(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
       setIsProxyMode(false);
     }, (error) => {
-      if (!isProxyMode) handleFirestoreError(error, OperationType.GET, 'buffs');
+      if (!isProxyModeRef.current) handleFirestoreError(error, OperationType.GET, 'buffs');
       setIsProxyMode(true);
     });
 
@@ -269,7 +275,7 @@ export default function Page() {
       setDbSpecialEffects(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
       setIsProxyMode(false);
     }, (error) => {
-      if (!isProxyMode) handleFirestoreError(error, OperationType.GET, 'special_effects');
+      if (!isProxyModeRef.current) handleFirestoreError(error, OperationType.GET, 'special_effects');
       setIsProxyMode(true);
     });
 

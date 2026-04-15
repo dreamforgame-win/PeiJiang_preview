@@ -870,9 +870,10 @@ export default function MockBattle({ allGenerals, allTactics, allTeams, onGenera
                 {modalTab === 'general' ? (
                   filteredGenerals.map((g, i) => {
                     const isAlreadyInWarehouse = manuallyAddedGenerals.some(mg => mg.name === g.name);
-                    const isAlreadyInSlots = roundsData.some(round => round.some(group => group.some(slot => slot?.data.name === g.name)));
+                    // Only check for duplicates within the CURRENT round
+                    const isAlreadyInCurrentRound = roundsData[modalTarget?.roundIndex || 0].some(group => group.some(slot => slot?.data.name === g.name));
                     const isSelected = tempSelectedItems.some(item => (item.data ? item.data.name : item.name) === g.name);
-                    const isDisabled = isAlreadyInWarehouse || isAlreadyInSlots;
+                    const isDisabled = isAlreadyInWarehouse || isAlreadyInCurrentRound;
                     return (
                       <button
                         key={i}
@@ -886,9 +887,9 @@ export default function MockBattle({ allGenerals, allTactics, allTeams, onGenera
                               : 'bg-surface-container-highest border-outline-variant/20 hover:bg-primary/5 hover:border-primary/50 text-on-surface'
                         }`}
                       >
-                        {isAlreadyInSlots ? (
+                        {isAlreadyInCurrentRound ? (
                           <span className="absolute top-1 right-1 text-[8px] bg-secondary text-white px-1 rounded font-bold">
-                            已录入
+                            本轮已选
                           </span>
                         ) : isAlreadyInWarehouse ? (
                           <span className="absolute top-1 right-1 text-[8px] bg-green-500 text-white px-1 rounded font-bold">
@@ -903,9 +904,10 @@ export default function MockBattle({ allGenerals, allTactics, allTeams, onGenera
                 ) : (
                   filteredTactics.map((t, i) => {
                     const isAlreadyInWarehouse = manuallyAddedTactics.some(mt => mt.name === t.name);
-                    const isAlreadyInSlots = roundsData.some(round => round.some(group => group.some(slot => slot?.data.name === t.name)));
+                    // Only check for duplicates within the CURRENT round
+                    const isAlreadyInCurrentRound = roundsData[modalTarget?.roundIndex || 0].some(group => group.some(slot => slot?.data.name === t.name));
                     const isSelected = tempSelectedItems.some(item => (item.data ? item.data.name : item.name) === t.name);
-                    const isDisabled = isAlreadyInWarehouse || isAlreadyInSlots;
+                    const isDisabled = isAlreadyInWarehouse || isAlreadyInCurrentRound;
                     return (
                       <button
                         key={i}
@@ -919,9 +921,9 @@ export default function MockBattle({ allGenerals, allTactics, allTeams, onGenera
                               : 'bg-surface-container-highest border-outline-variant/20 hover:bg-primary/5 hover:border-primary/50 text-on-surface'
                         }`}
                       >
-                        {isAlreadyInSlots ? (
+                        {isAlreadyInCurrentRound ? (
                           <span className="absolute top-1 right-1 text-[8px] bg-secondary text-white px-1 rounded font-bold">
-                            已录入
+                            本轮已选
                           </span>
                         ) : isAlreadyInWarehouse ? (
                           <span className="absolute top-1 right-1 text-[8px] bg-green-500 text-white px-1 rounded font-bold">
