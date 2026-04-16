@@ -208,24 +208,33 @@ export default function Page() {
     }
 
     // Try to fetch data via Server Proxy first (for stability in restricted networks)
-    const fetchViaProxy = async () => {
-      try {
-        const res = await fetch('/api/data');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.generals) setDbGenerals(data.generals);
-          if (data.tactics) setDbTactics(data.tactics);
-          if (data.teams) setDbTeams(data.teams);
-          if (data.buffs) setDbBuffs(data.buffs);
-          if (data.special_effects) setDbSpecialEffects(data.special_effects);
-          
-          if (!isProxyModeRef.current) {
-            setIsProxyMode(true);
-            console.log("Data loaded via Server Proxy (China-friendly mode)");
+    const fetchViaProxy = async (retries = 3) => {
+      for (let i = 0; i < retries; i++) {
+        try {
+          const res = await fetch('/api/data');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.generals) setDbGenerals(data.generals);
+            if (data.tactics) setDbTactics(data.tactics);
+            if (data.teams) setDbTeams(data.teams);
+            if (data.buffs) setDbBuffs(data.buffs);
+            if (data.special_effects) setDbSpecialEffects(data.special_effects);
+            
+            if (!isProxyModeRef.current) {
+              setIsProxyMode(true);
+              console.log("Data loaded via Server Proxy (China-friendly mode)");
+            }
+            return; // Success
+          }
+        } catch (err) {
+          console.warn(`Proxy fetch attempt ${i + 1} failed:`, err);
+          if (i === retries - 1) {
+            console.error("Proxy fetch failed after multiple attempts:", err);
+          } else {
+            // Wait before retry
+            await new Promise(resolve => setTimeout(resolve, 2000 * (i + 1)));
           }
         }
-      } catch (err) {
-        console.error("Proxy fetch failed:", err);
       }
     };
 

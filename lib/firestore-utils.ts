@@ -29,8 +29,16 @@ export interface FirestoreErrorInfo {
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  
+  // Don't log full JSON for offline errors to reduce console noise
+  if (errorMessage.includes('the client is offline') || errorMessage.includes('Failed to fetch')) {
+    console.warn(`Firestore [${operationType}] at [${path}] failed: Client is offline or network restricted.`);
+    return null;
+  }
+
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: errorMessage,
     authInfo: {
       userId: auth?.currentUser?.uid,
       email: auth?.currentUser?.email,
