@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { X, CheckCircle2, AlertCircle, Info } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { X, CheckCircle2, AlertCircle, Info, ThumbsUp, ThumbsDown } from 'lucide-react';
 
 interface WarehouseQuickImportModalProps {
   isOpen: boolean;
@@ -13,6 +13,18 @@ interface WarehouseQuickImportModalProps {
   onImport: (generals: string[], tactics: string[]) => void;
 }
 
+type FuzzyMatch = {
+  original: string; // The text in the input
+  matched: string;  // The actual database name
+  type: 'general' | 'tactic';
+  approved: boolean | null; // null: pending, true: accepted, false: rejected
+};
+
+type LineStatus = {
+  text: string;
+  status: 'matched' | 'fuzzy' | 'unmatched';
+};
+
 export default function WarehouseQuickImportModal({
   isOpen,
   onClose,
@@ -23,8 +35,10 @@ export default function WarehouseQuickImportModal({
   onImport
 }: WarehouseQuickImportModalProps) {
   const [inputText, setInputText] = useState('');
+  const [lineStatuses, setLineStatuses] = useState<LineStatus[]>([]);
   const [parsedGenerals, setParsedGenerals] = useState<string[]>([]);
   const [parsedTactics, setParsedTactics] = useState<string[]>([]);
+  const [fuzzyMatches, setFuzzyMatches] = useState<FuzzyMatch[]>([]);
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<{
     total: number;
@@ -36,8 +50,10 @@ export default function WarehouseQuickImportModal({
   useEffect(() => {
     if (!isOpen) {
       setInputText('');
+      setLineStatuses([]);
       setParsedGenerals([]);
       setParsedTactics([]);
+      setFuzzyMatches([]);
       setImportResult(null);
       setIsImporting(false);
     }
@@ -45,23 +61,101 @@ export default function WarehouseQuickImportModal({
 
   useEffect(() => {
     if (!inputText.trim()) {
+      setLineStatuses([]);
       setParsedGenerals([]);
       setParsedTactics([]);
+      setFuzzyMatches([]);
       return;
     }
 
-    // Simple parsing logic: check if any general or tactic name exists in the text
-    const foundGenerals = allGenerals
-      .map(g => g.name)
-      .filter(name => inputText.includes(name));
-      
-    const foundTactics = allTactics
-      .map(t => t.name)
-      .filter(name => inputText.includes(name));
+    const allInputLines = inputText.split('\n');
+    const foundGenerals: string[] = [];
+    const foundTactics: string[] = [];
+    const localFuzzy: FuzzyMatch[] = [];
+    const localStatuses: LineStatus[] = [];
 
-    setParsedGenerals(foundGenerals);
-    setParsedTactics(foundTactics);
+    // Names in DB
+    const genNames = allGenerals.map(g => g.name);
+    const tacNames = allTactics.map(t => t.name);
+
+    allInputLines.forEach(rawLine => {
+      const line = rawLine.trim();
+      if (!line) {
+        localStatuses.push({ text: rawLine, status: 'unmatched' });
+        return;
+      }
+
+      let isExact = false;
+      let hasFuzzy = false;
+
+      // 1. Exact match
+      const exactG = genNames.find(name => line.includes(name));
+      const exactT = tacNames.find(name => line.includes(name));
+
+      if (exactG || exactT) {
+        if (exactG) foundGenerals.push(exactG);
+        if (exactT) foundTactics.push(exactT);
+        isExact = true;
+      } else {
+        // 2. Fuzzy match
+        const tryFuzzy = (targetNames: string[], type: 'general' | 'tactic') => {
+          targetNames.forEach(dbName => {
+            if (dbName.length === line.length && dbName !== line) {
+              let overlap = 0;
+              for (let i = 0; i < dbName.length; i++) {
+                if (line.includes(dbName[i])) overlap++;
+              }
+              if (overlap >= dbName.length / 2) {
+                if (!localFuzzy.some(f => f.original === line && f.matched === dbName)) {
+                  localFuzzy.push({ original: line, matched: dbName, type, approved: null });
+                  hasFuzzy = true;
+                }
+              }
+            }
+          });
+        };
+
+        tryFuzzy(genNames, 'general');
+        tryFuzzy(tacNames, 'tactic');
+      }
+
+      localStatuses.push({
+        text: rawLine,
+        status: isExact ? 'matched' : hasFuzzy ? 'fuzzy' : 'unmatched'
+      });
+    });
+
+    setLineStatuses(localStatuses);
+    setParsedGenerals(Array.from(new Set(foundGenerals)));
+    setParsedTactics(Array.from(new Set(foundTactics)));
+    setFuzzyMatches(localFuzzy);
   }, [inputText, allGenerals, allTactics]);
+
+  const toggleFuzzy = (index: number, approved: boolean) => {
+    setFuzzyMatches(prev => {
+      const updated = prev.map((f, i) => i === index ? { ...f, approved } : f);
+      
+      // Update line status if approved
+      if (approved) {
+        const fuzzyItem = updated[index];
+        setLineStatuses(curr => curr.map(ls => 
+          ls.text === fuzzyItem.original ? { ...ls, status: 'matched' } : ls
+        ));
+      }
+      
+      return updated;
+    });
+  };
+
+  const finalGenerals = useMemo(() => {
+    const approvedFuzzyG = fuzzyMatches.filter(f => f.type === 'general' && f.approved === true).map(f => f.matched);
+    return Array.from(new Set([...parsedGenerals, ...approvedFuzzyG]));
+  }, [parsedGenerals, fuzzyMatches]);
+
+  const finalTactics = useMemo(() => {
+    const approvedFuzzyT = fuzzyMatches.filter(f => f.type === 'tactic' && f.approved === true).map(f => f.matched);
+    return Array.from(new Set([...parsedTactics, ...approvedFuzzyT]));
+  }, [parsedTactics, fuzzyMatches]);
 
   const handleImport = () => {
     setIsImporting(true);
@@ -72,7 +166,7 @@ export default function WarehouseQuickImportModal({
     const newGeneralsToCollect: string[] = [];
     const newTacticsToCollect: string[] = [];
 
-    parsedGenerals.forEach(g => {
+    finalGenerals.forEach(g => {
       if ((collectedGenerals || []).includes(g)) {
         duplicateCount++;
       } else {
@@ -81,7 +175,7 @@ export default function WarehouseQuickImportModal({
       }
     });
 
-    parsedTactics.forEach(t => {
+    finalTactics.forEach(t => {
       if ((collectedTactics || []).includes(t)) {
         duplicateCount++;
       } else {
@@ -90,10 +184,7 @@ export default function WarehouseQuickImportModal({
       }
     });
 
-    const total = parsedGenerals.length + parsedTactics.length;
-    // We don't really have "failed" in this simple string matching logic unless we count things that weren't matched, 
-    // but the user said "筛选出有用的信息" so the total is the matched ones.
-    // Actually, "failed" could be 0 here since we only extract known ones.
+    const total = finalGenerals.length + finalTactics.length;
     
     onImport(newGeneralsToCollect, newTacticsToCollect);
     
@@ -125,21 +216,58 @@ export default function WarehouseQuickImportModal({
         <div className="p-6 overflow-y-auto flex-1 space-y-6">
           {!importResult ? (
             <>
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-on-surface">粘贴文本数据</label>
-                <textarea
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  placeholder="将包含武将和战法名称的文本粘贴到这里，建议使用pixpin截长图后全部文本复制粘贴于此..."
-                  className="w-full h-40 bg-surface-container-low border border-outline-variant/30 rounded-xl p-4 text-sm text-on-surface focus:outline-none focus:border-primary resize-none"
-                />
+              <div className="space-y-3">
+                <div className="flex justify-between items-center px-1">
+                  <label className="text-sm font-bold text-on-surface">粘贴文本并核对状态</label>
+                  <span className="text-[10px] text-on-surface-variant flex gap-2">
+                    <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>已匹配</span>
+                    <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 bg-amber-500 rounded-full"></span>疑似(⭐)</span>
+                    <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>未识别</span>
+                  </span>
+                </div>
+                <div className="relative group bg-surface-container-low border border-outline-variant/30 rounded-xl overflow-hidden focus-within:border-primary">
+                  <textarea
+                    id="import-textarea"
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    onScroll={(e) => {
+                      const target = e.target as HTMLTextAreaElement;
+                      const overlay = document.getElementById('import-overlay');
+                      if (overlay) overlay.scrollTop = target.scrollTop;
+                    }}
+                    placeholder="将包含武将和战法名称的文本粘贴到这里..."
+                    className="w-full h-48 bg-transparent p-4 text-sm text-transparent caret-on-surface focus:outline-none resize-none z-10 relative leading-6"
+                  />
+                  <div 
+                    id="import-overlay"
+                    className="absolute inset-0 p-4 text-sm pointer-events-none overflow-hidden whitespace-pre-wrap break-words leading-6 h-48"
+                  >
+                    {lineStatuses.length > 0 ? (
+                      lineStatuses.map((line, idx) => (
+                        <div key={idx} className={`${
+                          line.status === 'matched' ? 'text-green-600' :
+                          line.status === 'fuzzy' ? 'text-amber-600' :
+                          'text-red-500'
+                        }`}>
+                          {line.text}
+                          {line.status === 'fuzzy' && ' ⭐'}
+                        </div>
+                      ))
+                    ) : (
+                      <span className="text-on-surface-variant/30 italic">等待粘贴文本...</span>
+                    )}
+                  </div>
+                </div>
+                <p className="text-[10px] text-on-surface-variant px-1">
+                  提示：您可以直接在输入框内修改错别字。绿色表示已识别成功，红色表示未识别，⭐ 表示存在建议 matching。
+                </p>
               </div>
 
-              {(parsedGenerals.length > 0 || parsedTactics.length > 0) && (
-                <div className="space-y-4">
+              {(parsedGenerals.length > 0 || parsedTactics.length > 0 || fuzzyMatches.length > 0) && (
+                <div className="space-y-6">
                   <h3 className="text-sm font-bold text-on-surface flex items-center gap-2">
                     <Info className="w-4 h-4 text-primary" />
-                    识别结果 ({parsedGenerals.length + parsedTactics.length} 项)
+                    识别结果 ({finalGenerals.length + finalTactics.length} 项)
                   </h3>
                   
                   {parsedGenerals.length > 0 && (
@@ -163,6 +291,57 @@ export default function WarehouseQuickImportModal({
                           <span key={i} className="text-xs px-2 py-1 bg-secondary/10 text-secondary rounded">
                             {t}
                           </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {fuzzyMatches.length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-xs text-amber-600 font-bold border-t border-outline-variant/20 pt-4 px-1">
+                        模糊匹配建议 (请选择是否采纳)
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {fuzzyMatches.map((f, i) => (
+                          <div key={i} className={`p-2 rounded-xl border flex flex-col gap-2 transition-all ${
+                            f.approved === true ? 'bg-green-50/50 border-green-200' : 
+                            f.approved === false ? 'bg-red-50/50 border-red-200' : 
+                            'bg-amber-50/50 border-amber-200 h-24'
+                          }`}>
+                            <div className="flex justify-between items-center px-1">
+                              <span className="text-[10px] text-on-surface-variant truncate max-w-[80px]" title={`原始文本: ${f.original}`}>
+                                原文: {f.original}
+                              </span>
+                              <span className={`text-[10px] font-bold px-1.5 rounded-full ${f.type === 'general' ? 'bg-primary/10 text-primary' : 'bg-secondary/10 text-secondary'}`}>
+                                {f.type === 'general' ? '武将' : '战法'}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between gap-1 px-1 flex-1">
+                              <span className="text-sm font-black truncate text-on-surface">{f.matched}</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 mt-auto">
+                              <button 
+                                onClick={() => toggleFuzzy(i, false)}
+                                className={`py-1 rounded-md text-[10px] font-bold transition-all shadow-sm ${
+                                  f.approved === false 
+                                    ? 'bg-red-500 text-white' 
+                                    : 'bg-red-500/10 text-red-600 hover:bg-red-500 hover:text-white'
+                                }`}
+                              >
+                                不采纳
+                              </button>
+                              <button 
+                                onClick={() => toggleFuzzy(i, true)}
+                                className={`py-1 rounded-md text-[10px] font-bold transition-all shadow-sm ${
+                                  f.approved === true 
+                                    ? 'bg-green-600 text-white' 
+                                    : 'bg-green-600/10 text-green-700 hover:bg-green-600 hover:text-white'
+                                }`}
+                              >
+                                采纳
+                              </button>
+                            </div>
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -199,7 +378,7 @@ export default function WarehouseQuickImportModal({
           )}
         </div>
 
-        <div className="p-6 border-t border-outline-variant/20 flex justify-end gap-3 shrink-0">
+        <div className="p-6 border-t border-outline-variant/20 flex justify-end gap-3 shrink-0 relative">
           {!importResult ? (
             <>
               <button
@@ -208,13 +387,27 @@ export default function WarehouseQuickImportModal({
               >
                 取消
               </button>
-              <button
-                onClick={handleImport}
-                disabled={isImporting || (parsedGenerals.length === 0 && parsedTactics.length === 0)}
-                className="px-6 py-2.5 rounded-lg font-bold text-sm bg-primary text-white hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {isImporting ? '录入中...' : '快捷录入'}
-              </button>
+              <div className="group relative">
+                {fuzzyMatches.some(f => f.approved === null) && (
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                    需要先完成 [模糊匹配建议] 处理
+                  </div>
+                )}
+                <button
+                  onClick={() => {
+                    if (fuzzyMatches.some(f => f.approved === null)) return;
+                    handleImport();
+                  }}
+                  disabled={isImporting || (finalGenerals.length === 0 && finalTactics.length === 0) || fuzzyMatches.some(f => f.approved === null)}
+                  className={`px-6 py-2.5 rounded-lg font-bold text-sm transition-all flex items-center gap-2 ${
+                    fuzzyMatches.some(f => f.approved === null)
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-primary text-white hover:bg-primary/90'
+                  }`}
+                >
+                  {isImporting ? '录入中...' : '快捷录入'}
+                </button>
+              </div>
             </>
           ) : (
             <button
