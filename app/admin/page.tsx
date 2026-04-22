@@ -21,7 +21,10 @@ export default function AdminPanel() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<any>({});
+  const [searchQuery, setSearchQuery] = useState('');
   const [teamTypeFilter, setTeamTypeFilter] = useState<string>('全部');
+  const [factionFilter, setFactionFilter] = useState<string>('全部');
+  const [tacticTypeFilter, setTacticTypeFilter] = useState<string>('全部');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   useEffect(() => {
@@ -194,10 +197,50 @@ export default function AdminPanel() {
     return ['全部', ...Array.from(types)];
   }, [teams]);
 
-  const filteredTeams = useMemo(() => {
-    if (teamTypeFilter === '全部') return teams;
-    return teams.filter(t => (t.teamType || '未分类') === teamTypeFilter);
-  }, [teams, teamTypeFilter]);
+  const factions = ['全部', '魏', '蜀', '吴', '群', '晋'];
+  const tacticTypes = ['全部', '指挥', '主动', '被动', '追击', '阵法', '兵种'];
+
+  const filteredItems = useMemo(() => {
+    let items = activeTab === 'generals' ? generals 
+              : activeTab === 'tactics' ? tactics 
+              : activeTab === 'teams' ? teams 
+              : activeTab === 'buffs' ? buffs 
+              : specialEffects;
+
+    if (activeTab === 'teams' && teamTypeFilter !== '全部') {
+      items = items.filter(t => (t.teamType || '未分类') === teamTypeFilter);
+    }
+    
+    if (activeTab === 'generals' && factionFilter !== '全部') {
+      items = items.filter(g => (g.faction || '魏') === factionFilter);
+    }
+    
+    if (activeTab === 'tactics' && tacticTypeFilter !== '全部') {
+      items = items.filter(t => (t.type || '指挥') === tacticTypeFilter);
+    }
+
+    if (searchQuery.trim()) {
+      const qs = searchQuery.toLowerCase().split(/[\s,，]+/).filter(Boolean);
+      items = items.filter(item => {
+        const searchableText = [
+          item.name,
+          item.desc,
+          item.tactic_name,
+          item.tactic_description,
+          item.description,
+          item.badge,
+          item.season,
+          item.troopType,
+          item.traitType,
+          item.config?.map((c: any) => `${c.武将} ${c.技能} ${c.兵种}`).join(' ')
+        ].filter(Boolean).join(' ').toLowerCase();
+
+        return qs.every(q => searchableText.includes(q));
+      });
+    }
+
+    return items;
+  }, [activeTab, generals, tactics, teams, buffs, specialEffects, teamTypeFilter, factionFilter, tacticTypeFilter, searchQuery]);
 
   const renderForm = () => {
     return (
@@ -566,11 +609,20 @@ export default function AdminPanel() {
       {renderForm()}
 
       <div className="bg-surface p-4 rounded-xl shadow-sm border">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="font-bold capitalize">{activeTab === 'generals' ? '武将' : activeTab === 'tactics' ? '战法' : activeTab === 'teams' ? '阵容' : '效果'} 列表</h2>
-          {activeTab === 'teams' && (
-            <div className="flex items-center gap-4">
-              <div className="flex gap-2 overflow-x-auto pb-1 max-w-2xl scrollbar-hide">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+          <h2 className="font-bold capitalize whitespace-nowrap">{activeTab === 'generals' ? '武将' : activeTab === 'tactics' ? '战法' : activeTab === 'teams' ? '阵容' : activeTab === 'buffs' ? '效果' : '特效'} 列表 ({filteredItems.length})</h2>
+          
+          <div className="flex flex-wrap items-center gap-4 w-full md:w-auto flex-1 md:justify-end">
+            <input 
+              type="text" 
+              placeholder={`搜索${activeTab === 'generals' ? '武将' : activeTab === 'tactics' ? '战法' : activeTab === 'teams' ? '阵容' : '效果'}...`}
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="border p-2 rounded-lg bg-surface-container-low focus:ring-2 focus:ring-primary focus:outline-none max-w-xs flex-1"
+            />
+
+            {activeTab === 'teams' && (
+              <div className="flex gap-2 overflow-x-auto pb-1 max-w-sm scrollbar-hide">
                 {teamTypes.map(type => (
                   <button
                     key={type}
@@ -581,11 +633,39 @@ export default function AdminPanel() {
                   </button>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+            
+            {activeTab === 'generals' && (
+              <div className="flex gap-2 overflow-x-auto pb-1 max-w-sm scrollbar-hide">
+                {factions.map(faction => (
+                  <button
+                    key={faction}
+                    onClick={() => setFactionFilter(faction)}
+                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all whitespace-nowrap ${factionFilter === faction ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                  >
+                    {faction}
+                  </button>
+                ))}
+              </div>
+            )}
+            
+            {activeTab === 'tactics' && (
+              <div className="flex gap-2 overflow-x-auto pb-1 max-w-sm scrollbar-hide">
+                {tacticTypes.map(type => (
+                  <button
+                    key={type}
+                    onClick={() => setTacticTypeFilter(type)}
+                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all whitespace-nowrap ${tacticTypeFilter === type ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
         <div className="space-y-4">
-          {(activeTab === 'generals' ? generals : activeTab === 'tactics' ? tactics : activeTab === 'buffs' ? buffs : activeTab === 'special_effects' ? specialEffects : filteredTeams).map(item => (
+          {filteredItems.map(item => (
             <div key={item.id} className="border rounded-lg overflow-hidden bg-white">
               <div 
                 className="p-3 flex justify-between items-center cursor-pointer hover:bg-gray-50"

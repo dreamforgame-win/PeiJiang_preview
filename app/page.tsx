@@ -35,6 +35,30 @@ import { generateShareCode } from '@/lib/shareCode';
 export default function Page() {
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+
+  // Account Management
+  const [accounts, setAccounts] = usePersistentState<any[]>('playerAccounts', [{ id: 'default', name: '账号1' }]);
+  const [activeAccountId, setActiveAccountId] = usePersistentState<string>('activeAccountId', 'default');
+  const [isEditingAccount, setIsEditingAccount] = useState<string | null>(null);
+  const [editAccountName, setEditAccountName] = useState('');
+
+  const activeAccount = useMemo(() => accounts.find(a => a.id === activeAccountId) || accounts[0], [accounts, activeAccountId]);
+
+  const getAccountKey = useCallback((key: string) => {
+    return `${activeAccountId}_${key}`;
+  }, [activeAccountId]);
+
+  const handleAddAccount = () => {
+    const newId = `account_${Date.now()}`;
+    const newAccount = { id: newId, name: `账号${accounts.length + 1}` };
+    setAccounts([...accounts, newAccount]);
+    setActiveAccountId(newId);
+  };
+
+  const handleRenameAccount = (id: string, newName: string) => {
+    setAccounts(prev => prev.map(a => a.id === id ? { ...a, name: newName } : a));
+    setIsEditingAccount(null);
+  };
   
   // Firestore Data
   const [dbGenerals, setDbGenerals] = useState<any[]>([]);
@@ -43,7 +67,7 @@ export default function Page() {
   const [dbBuffs, setDbBuffs] = useState<any[]>([]);
   const [dbSpecialEffects, setDbSpecialEffects] = useState<any[]>([]);
 
-  const [allTeams, setAllTeams] = usePersistentState<any[]>('allTeams', []);
+  const [allTeams, setAllTeams] = usePersistentState<any[]>(getAccountKey('allTeams'), []);
   const currentTeams = useMemo(() => {
     const merged = [...dbTeams];
     const seenIds = new Set(dbTeams.map(t => t.id));
@@ -78,10 +102,10 @@ export default function Page() {
   const [isTeamEditorOpen, setIsTeamEditorOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<any>(null);
   
-  const [collectedGenerals, toggleCollectGeneral, setCollectedGenerals] = usePersistentCollection('collectedGenerals', []);
-  const [collectedTactics, toggleCollectTactic, setCollectedTactics] = usePersistentCollection('collectedTactics', []);
-  const [customGenerals, setCustomGenerals] = usePersistentState<any[]>('customGenerals', []);
-  const [customTactics, setCustomTactics] = usePersistentState<any[]>('customTactics', []);
+  const [collectedGenerals, toggleCollectGeneral, setCollectedGenerals] = usePersistentCollection(getAccountKey('collectedGenerals'), []);
+  const [collectedTactics, toggleCollectTactic, setCollectedTactics] = usePersistentCollection(getAccountKey('collectedTactics'), []);
+  const [customGenerals, setCustomGenerals] = usePersistentState<any[]>(getAccountKey('customGenerals'), []);
+  const [customTactics, setCustomTactics] = usePersistentState<any[]>(getAccountKey('customTactics'), []);
 
   const [isGeneralQuickEntryOpen, setIsGeneralQuickEntryOpen] = useState(false);
   const [isTacticQuickEntryOpen, setIsTacticQuickEntryOpen] = useState(false);
@@ -100,7 +124,7 @@ export default function Page() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const [favoritedTeams, toggleFavoriteTeam] = usePersistentCollection('favoritedTeams', []);
+  const [favoritedTeams, toggleFavoriteTeam] = usePersistentCollection(getAccountKey('favoritedTeams'), []);
 
   const dynamicTeamTypes = useMemo(() => {
     const types = new Set(dbTeams.map(t => t.teamType).filter(Boolean));
@@ -758,24 +782,61 @@ export default function Page() {
     <div className="min-h-screen bg-surface text-on-surface flex flex-col">
       {/* Top Navigation */}
       <header className="fixed top-0 left-0 w-full flex justify-between items-center px-6 h-16 bg-white/80 backdrop-blur-md z-50 border-b border-outline-variant/10">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-8">
           <span className="text-xl font-black text-primary tracking-tight font-headline">
             ⚔️ 三谋配将助手
           </span>
+
+          <div className="flex items-center bg-surface-container-high rounded-full p-1 max-w-sm overflow-x-auto scrollbar-hide">
+            {accounts.map(acc => (
+              <div 
+                key={acc.id}
+                className={`relative flex items-center group ${activeAccountId === acc.id ? 'bg-white shadow-sm' : ''} rounded-full transition-all`}
+              >
+                {isEditingAccount === acc.id ? (
+                  <input 
+                    autoFocus
+                    className="bg-transparent border-none outline-none px-4 py-1.5 text-xs font-bold w-24"
+                    value={editAccountName}
+                    onChange={e => setEditAccountName(e.target.value)}
+                    onBlur={() => handleRenameAccount(acc.id, editAccountName || acc.name)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') handleRenameAccount(acc.id, editAccountName || acc.name);
+                    }}
+                  />
+                ) : (
+                  <button 
+                    onClick={() => setActiveAccountId(acc.id)}
+                    className={`px-4 py-1.5 text-xs font-bold whitespace-nowrap ${activeAccountId === acc.id ? 'text-primary' : 'text-outline hover:text-on-surface'}`}
+                  >
+                    {acc.name}
+                  </button>
+                )}
+                
+                {activeAccountId === acc.id && isEditingAccount !== acc.id && (
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsEditingAccount(acc.id);
+                      setEditAccountName(acc.name);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-container-high rounded-full mr-1 transition-opacity"
+                  >
+                    <Edit className="w-3 h-3 text-outline" />
+                  </button>
+                )}
+              </div>
+            ))}
+            <button 
+              onClick={handleAddAccount}
+              className="p-1.5 hover:bg-surface-container-highest text-outline rounded-full ml-1 transition-all"
+              title="添加账号"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
         </div>
         <div className="flex items-center gap-6 flex-nowrap">
-          {activeTab === 'teams' && (
-            <div className="hidden md:flex relative items-center flex-nowrap">
-              <input 
-                type="text" 
-                placeholder="搜索名称或武将..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-surface-container-high border-none rounded-lg px-4 py-2 w-64 text-sm focus:ring-2 focus:ring-secondary focus:ring-offset-2 transition-all outline-none"
-              />
-              <Search className="absolute right-3 text-outline w-4 h-4" />
-            </div>
-          )}
           <div className="flex items-center gap-4 flex-nowrap">
             {isProxyMode && (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg border border-amber-200 animate-pulse">
@@ -920,11 +981,22 @@ export default function Page() {
             <div className="flex flex-1 overflow-hidden">
               {/* Middle Column: Team List */}
               <section className="w-full md:w-80 bg-surface-container-low border-r border-outline-variant/10 overflow-y-auto flex-shrink-0">
-                <div className="p-4 border-b border-outline-variant/10 bg-surface sticky top-0 z-10">
+                <div className="p-4 border-b border-outline-variant/10 bg-surface sticky top-0 z-10 space-y-4">
                   <h3 className="text-sm font-bold text-on-surface flex items-center gap-2">
                     <List className="text-primary w-5 h-5" />
                     推荐阵容列表
                   </h3>
+                  
+                  <div className="relative">
+                    <input 
+                      type="text" 
+                      placeholder="搜索名称或武将..." 
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full bg-surface-container-high border border-outline-variant/20 rounded-lg pl-3 pr-10 py-2 text-xs focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none"
+                    />
+                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-outline w-4 h-4" />
+                  </div>
                 </div>
                 <div className="p-2 space-y-2">
                   {filteredTeams.map((team) => (
@@ -1199,6 +1271,7 @@ export default function Page() {
               allTeams={currentTeams} 
               onGeneralClick={handleGeneralClick}
               onTacticClick={handleTacticClick}
+              accountId={activeAccountId}
             />
           ) : activeTab === 'effectGallery' ? (
             <EffectGallery 

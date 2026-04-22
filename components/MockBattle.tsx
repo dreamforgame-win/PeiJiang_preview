@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Plus, Search, X, Check, Shield, Swords, RefreshCw } from 'lucide-react';
 
 interface MockBattleProps {
@@ -9,61 +9,64 @@ interface MockBattleProps {
   allTeams: any[];
   onGeneralClick?: (name: string) => void;
   onTacticClick?: (name: string) => void;
+  accountId?: string;
 }
 
 type SlotItem = { type: 'general' | 'tactic'; data: any };
 
-export default function MockBattle({ allGenerals, allTactics, allTeams, onGeneralClick, onTacticClick }: MockBattleProps) {
-  const [manuallyAddedGenerals, setManuallyAddedGenerals] = useState<any[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('mockBattleManuallyAddedGenerals');
-      if (saved) return JSON.parse(saved);
-    }
-    return [];
-  });
-  const [manuallyAddedTactics, setManuallyAddedTactics] = useState<any[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('mockBattleManuallyAddedTactics');
-      if (saved) return JSON.parse(saved);
-    }
-    return [];
-  });
-  const [simulationItem, setSimulationItem] = useState<SlotItem | null>(null);
-  
-  useEffect(() => {
-    localStorage.setItem('mockBattleManuallyAddedGenerals', JSON.stringify(manuallyAddedGenerals));
-    localStorage.setItem('mockBattleManuallyAddedTactics', JSON.stringify(manuallyAddedTactics));
-  }, [manuallyAddedGenerals, manuallyAddedTactics]);
+export default function MockBattle({ allGenerals, allTactics, allTeams, onGeneralClick, onTacticClick, accountId = 'default' }: MockBattleProps) {
+  const getAccountKey = useCallback((key: string) => `${accountId}_${key}`, [accountId]);
 
-  const [viewMode, setViewMode] = useState<'rounds' | 'recommendations'>('rounds');
-  const [currentRound, setCurrentRound] = useState(0);
-  // roundsData[roundIndex][groupIndex][slotIndex]
-  const [roundsData, setRoundsData] = useState<(SlotItem | null)[][][]>(() => {
+  const [manuallyAddedGenerals, setManuallyAddedGenerals] = useState<any[]>([]);
+  const [manuallyAddedTactics, setManuallyAddedTactics] = useState<any[]>([]);
+  const [roundsData, setRoundsData] = useState<(SlotItem | null)[][][]>(Array(7).fill(null).map(() => Array(3).fill(null).map(() => Array(3).fill(null))));
+  const [selectedGroups, setSelectedGroups] = useState<(number | null)[]>(Array(7).fill(null));
+
+  useEffect(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('mockBattleRoundsData');
-      if (saved) {
-        const parsed = JSON.parse(saved);
+      const g = localStorage.getItem(getAccountKey('mockBattleManuallyAddedGenerals'));
+      const t = localStorage.getItem(getAccountKey('mockBattleManuallyAddedTactics'));
+      const r = localStorage.getItem(getAccountKey('mockBattleRoundsData'));
+      const s = localStorage.getItem(getAccountKey('mockBattleSelectedGroups'));
+
+      setManuallyAddedGenerals(g ? JSON.parse(g) : []);
+      setManuallyAddedTactics(t ? JSON.parse(t) : []);
+      
+      if (r) {
+        const parsed = JSON.parse(r);
         if (parsed.length === 6) {
           parsed.push(Array(3).fill(null).map(() => Array(3).fill(null)));
         }
-        return parsed;
+        setRoundsData(parsed);
+      } else {
+        setRoundsData(Array(7).fill(null).map(() => Array(3).fill(null).map(() => Array(3).fill(null))));
       }
-    }
-    return Array(7).fill(null).map(() => Array(3).fill(null).map(() => Array(3).fill(null)));
-  });
-  const [selectedGroups, setSelectedGroups] = useState<(number | null)[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('mockBattleSelectedGroups');
-      if (saved) {
-        const parsed = JSON.parse(saved);
+
+      if (s) {
+        const parsed = JSON.parse(s);
         if (parsed.length === 6) {
           parsed.push(null);
         }
-        return parsed;
+        setSelectedGroups(parsed);
+      } else {
+        setSelectedGroups(Array(7).fill(null));
       }
     }
-    return Array(7).fill(null);
-  });
+  }, [accountId, getAccountKey]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(getAccountKey('mockBattleManuallyAddedGenerals'), JSON.stringify(manuallyAddedGenerals));
+      localStorage.setItem(getAccountKey('mockBattleManuallyAddedTactics'), JSON.stringify(manuallyAddedTactics));
+      localStorage.setItem(getAccountKey('mockBattleRoundsData'), JSON.stringify(roundsData));
+      localStorage.setItem(getAccountKey('mockBattleSelectedGroups'), JSON.stringify(selectedGroups));
+    }
+  }, [accountId, getAccountKey, manuallyAddedGenerals, manuallyAddedTactics, roundsData, selectedGroups]);
+
+  const [simulationItem, setSimulationItem] = useState<SlotItem | null>(null);
+
+  const [viewMode, setViewMode] = useState<'rounds' | 'recommendations'>('rounds');
+  const [currentRound, setCurrentRound] = useState(0);
 
   // Data Migration: Rename 甄姬 to 甄洛
   useEffect(() => {
@@ -112,8 +115,8 @@ export default function MockBattle({ allGenerals, allTactics, allTeams, onGenera
   ];
 
   const saveToLocalStorage = (rounds: any, groups: any) => {
-    localStorage.setItem('mockBattleRoundsData', JSON.stringify(rounds));
-    localStorage.setItem('mockBattleSelectedGroups', JSON.stringify(groups));
+    localStorage.setItem(getAccountKey('mockBattleRoundsData'), JSON.stringify(rounds));
+    localStorage.setItem(getAccountKey('mockBattleSelectedGroups'), JSON.stringify(groups));
   };
 
   const [resetConfirm, setResetConfirm] = useState(false);
@@ -129,10 +132,10 @@ export default function MockBattle({ allGenerals, allTactics, allTeams, onGenera
     setCurrentRound(0);
     setResetConfirm(false);
     
-    localStorage.removeItem('mockBattleManuallyAddedGenerals');
-    localStorage.removeItem('mockBattleManuallyAddedTactics');
-    localStorage.removeItem('mockBattleRoundsData');
-    localStorage.removeItem('mockBattleSelectedGroups');
+    localStorage.removeItem(getAccountKey('mockBattleManuallyAddedGenerals'));
+    localStorage.removeItem(getAccountKey('mockBattleManuallyAddedTactics'));
+    localStorage.removeItem(getAccountKey('mockBattleRoundsData'));
+    localStorage.removeItem(getAccountKey('mockBattleSelectedGroups'));
   };
 
   const normalizedTeams = useMemo(() => {

@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
-    <html lang="zh-CN" className={`${manrope.variable} ${workSans.variable}`}>
+    <html lang="zh-CN" className={`${manrope.variable} ${workSans.variable}`} suppressHydrationWarning>
       <body className="font-body antialiased" suppressHydrationWarning>{children}</body>
     </html>
   );
