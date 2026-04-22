@@ -292,10 +292,10 @@ export default function MockBattle({ allGenerals, allTactics, allTeams, onGenera
       const remainingSpace = 3 - tempSelectedItems.length;
       if (remainingSpace <= 0) return;
       
-      const newItemsToAdd = [];
+      const newItemsToAdd: any[] = [];
       for (const item of availableItems) {
         if (newItemsToAdd.length >= remainingSpace) break;
-        if (!tempSelectedItems.some(existing => existing.data.name === item.name)) {
+        if (!tempSelectedItems.some(existing => existing.data?.name === item.name)) {
           newItemsToAdd.push({ data: item, type });
         }
       }
@@ -303,7 +303,7 @@ export default function MockBattle({ allGenerals, allTactics, allTeams, onGenera
         setTempSelectedItems(prev => [...prev, ...newItemsToAdd]);
       }
     } else {
-      const newItemsToAdd = availableItems.filter(item => 
+      const newItemsToAdd: any[] = availableItems.filter(item => 
         !tempSelectedItems.some(existing => (existing.data ? existing.data.name : existing.name) === item.name)
       );
       if (newItemsToAdd.length > 0) {
