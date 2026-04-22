@@ -271,6 +271,47 @@ export default function MockBattle({ allGenerals, allTactics, allTeams, onGenera
     }
   };
 
+  const handleQuickSelect = () => {
+    if (!modalTarget) return;
+    const itemsToProcess = modalTab === 'general' ? filteredGenerals : filteredTactics;
+    const type = modalTab;
+
+    const availableItems = itemsToProcess.filter(item => {
+      const isAlreadyInWarehouse = type === 'general' 
+        ? manuallyAddedGenerals.some(mg => mg.name === item.name)
+        : manuallyAddedTactics.some(mt => mt.name === item.name);
+      
+      const isAlreadyInCurrentRound = roundsData[modalTarget?.roundIndex || 0].some(group => 
+        group.some(slot => slot?.data.name === item.name)
+      );
+
+      return !isAlreadyInWarehouse && !isAlreadyInCurrentRound;
+    });
+
+    if (modalTarget.dest === 'slot') {
+      const remainingSpace = 3 - tempSelectedItems.length;
+      if (remainingSpace <= 0) return;
+      
+      const newItemsToAdd = [];
+      for (const item of availableItems) {
+        if (newItemsToAdd.length >= remainingSpace) break;
+        if (!tempSelectedItems.some(existing => existing.data.name === item.name)) {
+          newItemsToAdd.push({ data: item, type });
+        }
+      }
+      if (newItemsToAdd.length > 0) {
+        setTempSelectedItems(prev => [...prev, ...newItemsToAdd]);
+      }
+    } else {
+      const newItemsToAdd = availableItems.filter(item => 
+        !tempSelectedItems.some(existing => (existing.data ? existing.data.name : existing.name) === item.name)
+      );
+      if (newItemsToAdd.length > 0) {
+        setTempSelectedItems(prev => [...prev, ...newItemsToAdd]);
+      }
+    }
+  };
+
   const handleConfirmModal = () => {
     if (modalTarget?.dest === 'warehouse_general') {
       const newGenerals = tempSelectedItems.filter(item => !manuallyAddedGenerals.some(g => g.name === item.name));
@@ -945,6 +986,14 @@ export default function MockBattle({ allGenerals, allTactics, allTeams, onGenera
                   className="w-full pl-9 pr-4 py-2 bg-surface-container-highest rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
+              {searchQuery && (modalTab === 'general' ? filteredGenerals.length > 0 : filteredTactics.length > 0) && (
+                <button
+                  onClick={handleQuickSelect}
+                  className="px-3 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-lg text-sm font-bold transition-all whitespace-nowrap"
+                >
+                  快速选择
+                </button>
+              )}
               <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-surface-container-highest rounded-lg">
                 <X className="w-5 h-5" />
               </button>
