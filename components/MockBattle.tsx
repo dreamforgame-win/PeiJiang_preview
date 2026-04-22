@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Plus, Search, X, Check, Shield, Swords, RefreshCw } from 'lucide-react';
+import { Plus, Search, X, Check, Shield, Swords, RefreshCw, Info } from 'lucide-react';
 
 interface MockBattleProps {
   allGenerals: any[];
@@ -346,14 +346,27 @@ export default function MockBattle({ allGenerals, allTactics, allTeams, onGenera
                   <div 
                     key={`round-${roundIndex}-${i}`} 
                     onClick={() => setSimulationItem(slot!)}
-                    className={`aspect-square rounded-lg flex items-center justify-center text-sm font-bold border border-primary/30 bg-surface-container-highest text-center p-1 relative group cursor-pointer transition-all ${
+                    className={`aspect-square rounded-lg flex flex-col items-center justify-center text-xs font-bold border border-primary/30 bg-surface-container-highest text-center p-1 relative group cursor-pointer transition-all ${
                       simulationItem?.data.name === slot!.data.name ? 'border-primary ring-1 ring-primary' : ''
                     }`}
                   >
-                    {slot!.data.name}
-                    <div className="absolute top-0.5 left-0.5 bg-primary text-white text-[8px] px-1 rounded">
+                    <span className="line-clamp-2">{slot!.data.name}</span>
+                    {slot!.data.tactic_trait && (
+                      <span className="text-[8px] opacity-60 font-normal mt-0.5">{slot!.data.tactic_trait}</span>
+                    )}
+                    <div className="absolute top-0.5 left-0.5 bg-primary text-white text-[8px] px-1 rounded flex items-center gap-0.5">
                       R{roundIndex + 1}
                     </div>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onGeneralClick?.(slot!.data.name);
+                      }}
+                      className="absolute top-0.5 right-0.5 bg-surface-container-highest/80 text-on-surface rounded-full p-1 shadow-sm hover:bg-[#6d160f] hover:text-white transition-all hidden group-hover:block z-10"
+                      title="详情"
+                    >
+                      <Info className="w-3 h-3" />
+                    </button>
                   </div>
                 ));
             })}
@@ -362,20 +375,33 @@ export default function MockBattle({ allGenerals, allTactics, allTeams, onGenera
               <div 
                 key={`manual-${i}`} 
                 onClick={() => setSimulationItem({ type: 'general', data: g })}
-                className={`aspect-square rounded-lg flex items-center justify-center text-sm font-bold border border-outline-variant/30 text-center p-1 relative group cursor-pointer transition-all ${
+                className={`aspect-square rounded-lg flex flex-col items-center justify-center text-xs font-bold border border-outline-variant/30 text-center p-1 relative group cursor-pointer transition-all ${
                   simulationItem?.data.name === g.name ? 'border-primary ring-1 ring-primary' : 'bg-surface-container-highest'
                 }`}
               >
-                {g.name}
+                <span className="line-clamp-2">{g.name}</span>
+                {g.tactic_trait && (
+                  <span className="text-[8px] opacity-60 font-normal mt-0.5">{g.tactic_trait}</span>
+                )}
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onGeneralClick?.(g.name);
+                  }}
+                  className="absolute top-0.5 left-0.5 bg-surface-container-highest/80 text-on-surface rounded-full p-1 shadow-sm hover:bg-[#6d160f] hover:text-white transition-all hidden group-hover:block z-10"
+                  title="详情"
+                >
+                  <Info className="w-3 h-3" />
+                </button>
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
                     setManuallyAddedGenerals(prev => prev.filter((_, idx) => idx !== i));
                     if (simulationItem?.data.name === g.name) setSimulationItem(null);
                   }}
-                  className="absolute top-0.5 right-0.5 bg-error/90 text-white rounded-full p-1 shadow-sm hover:bg-error transition-all hidden group-hover:block z-10"
+                  className="absolute top-0.5 right-0.5 bg-error/90 text-black rounded-full p-1 shadow-sm hover:bg-[#6d160f] hover:text-white transition-all hidden group-hover:block z-10"
                 >
-                  <X className="w-3 h-3 stroke-[3] text-black" />
+                  <X className="w-3 h-3 stroke-[3]" />
                 </button>
               </div>
             ))}
@@ -406,14 +432,28 @@ export default function MockBattle({ allGenerals, allTactics, allTeams, onGenera
                   <div 
                     key={`round-${roundIndex}-${i}`} 
                     onClick={() => setSimulationItem(slot!)}
-                    className={`aspect-square rounded-lg flex items-center justify-center text-sm font-bold border border-tertiary/30 bg-surface-container-highest text-center p-1 relative group cursor-pointer transition-all ${
+                    className={`aspect-square rounded-lg flex flex-col items-center justify-center text-xs font-bold border border-tertiary/30 bg-surface-container-highest text-center p-1 relative group cursor-pointer transition-all ${
                       simulationItem?.data.name === slot!.data.name ? 'border-tertiary ring-1 ring-tertiary' : ''
                     }`}
                   >
-                    {slot!.data.name}
-                    <div className="absolute top-0.5 left-0.5 bg-tertiary text-white text-[8px] px-1 rounded">
+                    <span className="line-clamp-2">{slot!.data.name}</span>
+                    <div className="flex flex-col text-[8px] opacity-60 font-normal mt-0.5 leading-tight">
+                      <span>{slot!.data.type}</span>
+                      {slot!.data.traitType && <span>{slot!.data.traitType}</span>}
+                    </div>
+                    <div className="absolute top-0.5 left-0.5 bg-tertiary text-white text-[8px] px-1 rounded flex items-center gap-0.5">
                       R{roundIndex + 1}
                     </div>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onTacticClick?.(slot!.data.name);
+                      }}
+                      className="absolute top-0.5 right-0.5 bg-surface-container-highest/80 text-on-surface rounded-full p-1 shadow-sm hover:bg-[#6d160f] hover:text-white transition-all hidden group-hover:block z-10"
+                      title="详情"
+                    >
+                      <Info className="w-3 h-3" />
+                    </button>
                   </div>
                 ));
             })}
@@ -422,20 +462,34 @@ export default function MockBattle({ allGenerals, allTactics, allTeams, onGenera
               <div 
                 key={`manual-${i}`} 
                 onClick={() => setSimulationItem({ type: 'tactic', data: t })}
-                className={`aspect-square rounded-lg flex items-center justify-center text-sm font-bold border border-outline-variant/30 text-center p-1 relative group cursor-pointer transition-all ${
+                className={`aspect-square rounded-lg flex flex-col items-center justify-center text-xs font-bold border border-outline-variant/30 text-center p-1 relative group cursor-pointer transition-all ${
                   simulationItem?.data.name === t.name ? 'border-tertiary ring-1 ring-tertiary' : 'bg-surface-container-highest'
                 }`}
               >
-                {t.name}
+                <span className="line-clamp-2">{t.name}</span>
+                <div className="flex flex-col text-[8px] opacity-60 font-normal mt-0.5 leading-tight">
+                  <span>{t.type}</span>
+                  {t.traitType && <span>{t.traitType}</span>}
+                </div>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onTacticClick?.(t.name);
+                  }}
+                  className="absolute top-0.5 left-0.5 bg-surface-container-highest/80 text-on-surface rounded-full p-1 shadow-sm hover:bg-[#6d160f] hover:text-white transition-all hidden group-hover:block z-10"
+                  title="详情"
+                >
+                  <Info className="w-3 h-3" />
+                </button>
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
                     setManuallyAddedTactics(prev => prev.filter((_, idx) => idx !== i));
                     if (simulationItem?.data.name === t.name) setSimulationItem(null);
                   }}
-                  className="absolute top-0.5 right-0.5 bg-error/90 text-white rounded-full p-1 shadow-sm hover:bg-error transition-all hidden group-hover:block z-10"
+                  className="absolute top-0.5 right-0.5 bg-error/90 text-black rounded-full p-1 shadow-sm hover:bg-[#6d160f] hover:text-white transition-all hidden group-hover:block z-10"
                 >
-                  <X className="w-3 h-3 stroke-[3] text-black" />
+                  <X className="w-3 h-3 stroke-[3]" />
                 </button>
               </div>
             ))}
@@ -565,10 +619,38 @@ export default function MockBattle({ allGenerals, allTactics, allTeams, onGenera
                                   </div>
                                 )}
                                 <div className="flex flex-col items-center gap-1 p-2 text-center mt-3">
-                                  <span className="text-xs text-gray-500 font-bold">
-                                    {slot.type === 'general' ? '武将' : '战法'}
-                                  </span>
-                                  <span className="font-bold text-sm text-gray-900 line-clamp-2">{slot.data.name}</span>
+                                  <div className="flex flex-col items-center">
+                                    <span className="text-[10px] text-gray-500 font-bold">
+                                      {slot.type === 'general' ? '武将' : '战法'}
+                                    </span>
+                                    <div className="flex gap-1">
+                                      {slot.type === 'general' ? (
+                                        slot.data.tactic_trait && <span className="text-[9px] text-primary/70">{slot.data.tactic_trait}</span>
+                                      ) : (
+                                        <>
+                                          <span className="text-[9px] text-tertiary/70">{slot.data.type}</span>
+                                          {slot.data.traitType && <span className="text-[9px] text-tertiary/70">{slot.data.traitType}</span>}
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <span className="font-bold text-sm text-gray-900 line-clamp-2 leading-tight">{slot.data.name}</span>
+                                </div>
+                                <div className="absolute top-1 left-1 flex gap-1 hidden group-hover:flex z-10">
+                                  <div 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (slot.type === 'general') {
+                                        onGeneralClick?.(slot.data.name);
+                                      } else {
+                                        onTacticClick?.(slot.data.name);
+                                      }
+                                    }}
+                                    className="bg-surface-container-highest text-black rounded-full p-1 shadow-sm hover:bg-[#6d160f] hover:text-white transition-all cursor-pointer"
+                                    title="详情"
+                                  >
+                                    <Info className="w-3 h-3" />
+                                  </div>
                                 </div>
                                 <div className="absolute top-1 right-1 flex gap-1 hidden group-hover:flex z-10">
                                   <div 
@@ -576,7 +658,7 @@ export default function MockBattle({ allGenerals, allTactics, allTeams, onGenera
                                       e.stopPropagation();
                                       handleOpenModal('slot', currentRound, groupIndex, slotIndex);
                                     }}
-                                    className="bg-surface-container-highest text-black rounded-full p-1 shadow-sm hover:bg-surface-container-highest/80 transition-all"
+                                    className="bg-surface-container-highest text-black rounded-full p-1 shadow-sm hover:bg-[#6d160f] hover:text-white transition-all"
                                     title="切换"
                                   >
                                     <RefreshCw className="w-3 h-3" />
@@ -589,7 +671,7 @@ export default function MockBattle({ allGenerals, allTactics, allTeams, onGenera
                                       setRoundsData(newRounds);
                                       saveToLocalStorage(newRounds, selectedGroups);
                                     }}
-                                    className="bg-surface-container-highest text-black rounded-full p-1 shadow-sm hover:bg-surface-container-highest/80 transition-all"
+                                    className="bg-surface-container-highest text-black rounded-full p-1 shadow-sm hover:bg-[#6d160f] hover:text-white transition-all"
                                     title="移除"
                                   >
                                     <X className="w-3 h-3 stroke-[3]" />
@@ -900,7 +982,10 @@ export default function MockBattle({ allGenerals, allTactics, allTeams, onGenera
                           </span>
                         ) : null}
                         <span className="font-bold text-sm">{g.name}</span>
-                        <span className="text-xs opacity-60 mt-1">{g.season}</span>
+                        <div className="flex flex-col items-center text-[10px] opacity-60 mt-0.5 leading-tight">
+                          <span>{g.season}</span>
+                          {g.tactic_trait && <span className="text-primary font-bold">{g.tactic_trait}</span>}
+                        </div>
                       </button>
                     );
                   })
@@ -934,7 +1019,10 @@ export default function MockBattle({ allGenerals, allTactics, allTeams, onGenera
                           </span>
                         ) : null}
                         <span className="font-bold text-sm">{t.name}</span>
-                        <span className="text-xs opacity-60 mt-1">{t.type}</span>
+                        <div className="flex flex-col items-center text-[10px] opacity-60 mt-0.5 leading-tight text-center">
+                          <span className="font-bold">{t.type}</span>
+                          {t.traitType && <span className="text-tertiary">{t.traitType}</span>}
+                        </div>
                       </button>
                     );
                   })
